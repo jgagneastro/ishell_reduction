@@ -181,13 +181,13 @@ Pro ishell_reduction_master, data_path
     print, '   be used with the appropriate object. When ready, launch this code again.'
     return
   endelse
-  
+
   ;Determine the number of orders and the minimum order spacing expected for each filter
   case strlowcase(data_filters[0]) of
-    ;KS-band data has 29 orders and 30 pixels minimum between each order
+    ;KS-band data has 29 orders and 15 pixels minimum between each order
     'kgas': begin
               n_orders = 29L
-              min_order_spacing = 30
+              min_order_spacing = 15
             end
     ;K2-band data has 32 orders and 15 pixels minimum between each order
     'k2': begin
