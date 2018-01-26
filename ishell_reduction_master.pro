@@ -164,6 +164,13 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   strkill, data_slits, '|'
   strkill, data_filters, '|'
   
+  ;Remove trailing spaces
+  object_names = strtrim(object_names,2)
+  data_comments = strtrim(data_comments,2)
+  tcs_obj = strtrim(tcs_obj,2)
+  data_slits = strtrim(data_slits,2)
+  data_filters = strtrim(data_filters,2)
+  
   ;Check whether the log file exists
   logfile = output_dir+'logfile_'+file_basename(data_path)+'.txt'
   
