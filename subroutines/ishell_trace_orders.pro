@@ -19,7 +19,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   
   ;Minimum pixel space between orders (default is 30 pixels for KS band)
   if ~keyword_set(min_order_spacing) then $
-    min_order_spacing = 30L
+    min_order_spacing = 15L
   
   ;Median smooth box size used to detect bad pixels
   bpix_mask_nsmooth = 3L
