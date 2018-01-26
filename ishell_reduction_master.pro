@@ -182,10 +182,18 @@ Pro ishell_reduction_master, data_path
     return
   endelse
   
-  ;Determine the number of orders expected from the filter
+  ;Determine the number of orders and the minimum order spacing expected for each filter
   case strlowcase(data_filters[0]) of
-    'kgas': n_orders = 29L ;KS-band data has 29 orders
-    'k2': n_orders = 32L ;K2-band has 32 orders
+    ;KS-band data has 29 orders and 30 pixels minimum between each order
+    'kgas': begin
+              n_orders = 29L
+              min_order_spacing = 30
+            end
+    ;K2-band data has 32 orders and 15 pixels minimum between each order
+    'k2': begin
+              n_orders = 32L
+              min_order_spacing = 15
+            end
   endcase
   
   ;Read the log file back
@@ -330,7 +338,7 @@ Pro ishell_reduction_master, data_path
       restore, order_mask_file;, orders_mask_f, orders_structure_f
     endif else begin
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders)
+      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing)
       save, file=order_mask_file, orders_mask_f, orders_structure_f, /compress
     endelse
     ;Store data in cubes

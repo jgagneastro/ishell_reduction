@@ -1,4 +1,4 @@
-Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_structure, N_ORDERS=n_orders
+Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_structure, N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing
   ;Takes a flat image as input and traces order positions
   ;IDEA (for future): instead of using a central median to trace the initial order positions, use a Z-shaped line to catch all orders at once
   ;Code version history
@@ -17,8 +17,9 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   if ~keyword_set(n_orders) then $
     n_orders = 29L
   
-  ;Minimum pixel space between orders
-  min_order_spacing = 30L
+  ;Minimum pixel space between orders (default is 30 pixels for KS band)
+  if ~keyword_set(min_order_spacing) then $
+    min_order_spacing = 30L
   
   ;Median smooth box size used to detect bad pixels
   bpix_mask_nsmooth = 3L
