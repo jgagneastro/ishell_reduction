@@ -215,10 +215,12 @@ Pro ishell_reduction_master, data_path
   endif
   
   ;Identify all darks
-  g_darks = where(strpos(strlowcase(object_names),'dark') ne -1 and strlowcase(data_slits) eq 'mirror' and strlowcase(do_reduce) eq 'yes', ng_darks)
-  if ng_darks eq 0 then begin
-    message, ' No darks were found in the data ! Skipping the dark subtraction step.', /continue
-    do_dark_subtraction = 0
+  if do_dark_subtraction eq 1 then begin
+    g_darks = where(strpos(strlowcase(object_names),'dark') ne -1 and strlowcase(data_slits) eq 'mirror' and strlowcase(do_reduce) eq 'yes', ng_darks)
+    if ng_darks eq 0 then begin
+      message, ' No darks were found in the data ! Skipping the dark subtraction step.', /continue
+      do_dark_subtraction = 0
+    endif
   endif
   
   if do_dark_subtraction eq 1 then begin
