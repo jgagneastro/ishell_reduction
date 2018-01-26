@@ -1,4 +1,4 @@
-Pro ishell_reduction_master, data_path
+Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug_trace_order, DO_DARK_SUBTRACTION=do_dark_subtraction, CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield
   ;Code version history
   ; - The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
   ; Version 1.0: First stable version (J. Gagne)
@@ -21,13 +21,20 @@ Pro ishell_reduction_master, data_path
     data_path = '/Volumes/bryson/iSHELL/Data/Raw/20171023UT/'
   
   ;The path where the data reduction products will be stored
-  output_dir_root = '/Volumes/bryson/iSHELL/redux/'
+  if ~keyword_set(output_dir_root) then $
+    output_dir_root = '/Volumes/bryson/iSHELL/redux/'
   
   ;Whether or not to do debugging for trace order detection
-  debug_trace_orders = 1
+  if debug_trace_order eq !NULL then $
+    debug_trace_orders = 1
   
   ;Whether or not darks should be subtracted
-  do_dark_subtraction = 0L
+  if do_dark_subtraction eq !NULL then $
+    do_dark_subtraction = 0L
+  
+  ;Whether fringing should be corrected in the flat field
+  if correct_fringing_in_flatfield eq !NULL then $
+    correct_fringing_in_flatfield = 1L
   
   ;Avoid N pixels on each side of the detector when normalizing
   edge_npix_avoid = 200L
@@ -100,9 +107,6 @@ Pro ishell_reduction_master, data_path
   ;Number of pixels to mask on each edge of the trace profile
   mask_trace_edges = 3L
   
-  ;Whether fringing should be corrected in the flat field
-  correct_fringing_in_flatfield = 1L
-  
   ;Number of rows used to measure the sky
   nrows_sky = 8L
   
@@ -118,7 +122,7 @@ Pro ishell_reduction_master, data_path
   ;http://irtfweb.ifa.hawaii.edu/~ishell/iSHELL_observing_manual.pdf
   dark_current = 0.05
   
-  ;/// End of: Parameters ///
+  ;/// End of: adjustable parameters ///
   
   ;Add the night ID after the output directory
   date_id = file_basename(data_path)
@@ -427,14 +431,13 @@ Pro ishell_reduction_master, data_path
     endif
     
     ;Select the proper combined dark exposure
-    g_dark_id = where(strlowcase(darks_ids_uniq) eq rtrim(integration_times[g_science[sci]],3), ngdark_id)
-    if do_dark_subtraction eq 0 or ngdark_id eq 0L then begin
-      if do_dark_subtraction eq 1 then $
+    if do_dark_subtraction eq 1 then begin
+      g_dark_id = where(strlowcase(darks_ids_uniq) eq rtrim(integration_times[g_science[sci]],3), ngdark_id)
+      if ngdark_id eq 0L then $
         message, ' No dark ID corresponding to exposure time '+rtrim(integration_times[g_science[sci]],3)+'s was found, skipping the dark subtraction !', /continue
-      dark_im = dblarr(nx,ny)
-    endif else begin
       dark_im = double(readfits(fits_data[g_dark_id[0L]]))
-    endelse
+    endif else $
+      dark_im = dblarr(nx,ny)
     
     ;Read the data file
     data_im = double(readfits(data_file,header,/silent))
