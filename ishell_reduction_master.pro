@@ -5,6 +5,8 @@ Pro ishell_reduction_master, data_path
   ; Version 1.1: Added outputs of polynomial coefficients for Ytrace pos and seeing versus X pixel in ASCII format (J. Gagne), March 3, 2017
   ; Version 1.2: Added N_orders keyword for compatibility with K band, January 26, 2018
   
+  ;Code version for headers
+  code_version = 1.2
   
   ;List of subroutines
   forward_function readfits,ishell_trace_orders,ishell_flat_fringing,interpol2,weighted_median,horizontal_median,$
@@ -13,9 +15,6 @@ Pro ishell_reduction_master, data_path
     correct_bad_pixels_posterior, sxaddpar, strkill
   
   ;/// Adjustable parameters ///
-  
-  ;Code version for headers
-  code_version = 1.1
   
   ;The path of the night which will be reduced
   if ~keyword_set(data_path) then $
@@ -177,6 +176,15 @@ Pro ishell_reduction_master, data_path
     return
   endelse
   
+  ;Verify that all files within that night's directory were taken with the same filter
+  if min(data_filters eq data_filters[0]) eq 0 then $
+    message, 'All data within one night''s directory must be obtained with the same filter. If this is not the case, you need to split the data into separate directories. You do not need to split data obtained with or without gas cell." 
+  
+  ;Determine the number of orders expected from the filter
+  case strlowcase(data_filters[0]) of
+    'kcont': n_orders = 29L ;KS-band data has 29 orders  
+  endcase
+  
   ;Read the log file back
   readcol, logfile, filenames_log, object_names, integration_times, data_comments, $
     gascell_position, data_filters, data_slits, do_reduce, comment=';', delimiter='|', $
@@ -319,13 +327,12 @@ Pro ishell_reduction_master, data_path
       restore, order_mask_file;, orders_mask_f, orders_structure_f
     endif else begin
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f)
+      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders)
       save, file=order_mask_file, orders_mask_f, orders_structure_f, /compress
     endelse
     ;Store data in cubes
     orders_mask_cube[*,*,f] = orders_mask_f
     if ~keyword_set(orders_structure_cube) then begin
-      n_orders = n_elements(orders_structure_f)
       orders_structure_cube = orders_structure_f[0L]
       nan_str, orders_structure_cube
       orders_structure_cube = replicate(orders_structure_cube,n_orders,nflat_uniq)
