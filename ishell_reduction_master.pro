@@ -57,7 +57,7 @@ Pro ishell_reduction_master, data_path
   gascell_header_key = 'GASCELL'
   
   ;Header key for filter
-  filter_header_key = 'GFLT'
+  filter_header_key = 'XDTILT'
   
   ;Header key for slit
   slit_header_key = 'SLIT'
@@ -177,13 +177,13 @@ Pro ishell_reduction_master, data_path
   endelse
   
   ;Verify that all files within that night's directory were taken with the same filter
-  if min(data_filters eq data_filters[0]) eq 0 then $
-    message, 'All data within one night''s directory must be obtained with the same filter. If this is not the case, you need to split the data into separate directories. You do not need to split data obtained with or without gas cell.'
+  ;if min(data_filters eq data_filters[0]) eq 0 then $
+  ;  message, 'All data within one night''s directory must be obtained with the same filter. If this is not the case, you need to split the data into separate directories. You do not need to split data obtained with or without gas cell.'
   
   ;Determine the number of orders expected from the filter
   case strlowcase(data_filters[0]) of
-    'kcont': n_orders = 29L ;KS-band data has 29 orders
-    'k': n_orders = 32L ;K2-band has 32 orders
+    'kgas': n_orders = 29L ;KS-band data has 29 orders
+    'k2': n_orders = 32L ;K2-band has 32 orders
   endcase
   
   ;Read the log file back
