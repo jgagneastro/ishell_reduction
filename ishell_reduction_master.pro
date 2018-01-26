@@ -154,9 +154,11 @@ Pro ishell_reduction_master, data_path
   data_slits = sxpar_mul(fits_data,slit_header_key)
   
   ;Clean up header information
-  strkill, object_names, ['=','''',',']
+  strkill, object_names, ['=','''',',','|']
   strkill, data_comments, ['=','''',',']
-  strkill, tcs_obj, ['=','''',',']
+  strkill, tcs_obj, ['=','''',',','|']
+  strkill, data_slits, '|'
+  strkill, data_filters, '|'
   
   ;Check whether the log file exists
   logfile = output_dir+'logfile_'+file_basename(data_path)+'.txt'
@@ -185,20 +187,6 @@ Pro ishell_reduction_master, data_path
     return
   endelse
 
-  ;Determine the number of orders and the minimum order spacing expected for each filter
-  case strlowcase(data_filters[0]) of
-    ;KS-band data has 29 orders and 15 pixels minimum between each order
-    'kgas': begin
-              n_orders = 29L
-              min_order_spacing = 15
-            end
-    ;K2-band data has 32 orders and 15 pixels minimum between each order
-    'k2': begin
-              n_orders = 32L
-              min_order_spacing = 15
-            end
-  endcase
-  
   ;Read the log file back
   readcol, logfile, filenames_log, object_names, integration_times, data_comments, tcs_obj, $
     gascell_position, data_filters, data_slits, do_reduce, comment=';', delimiter='|', $
@@ -284,7 +272,7 @@ Pro ishell_reduction_master, data_path
     message, ' No flats were found in the data !'
   
   ;Determine all different flat field identifications from their comments
-  flat_ids = tcs_obj[g_flats]+'_'+data_filters[g_flats]+'_'+data_slits[g_flats]
+  flat_ids = tcs_obj[g_flats]+'|'+data_filters[g_flats]+'|'+data_slits[g_flats]
   bad = where(flat_ids eq '', nbad)
   if nbad ne 0L then flat_ids[bad] = 'BLANK'
   
@@ -347,6 +335,22 @@ Pro ishell_reduction_master, data_path
     if file_test(order_mask_file) then begin
       restore, order_mask_file;, orders_mask_f, orders_structure_f
     endif else begin
+      
+      stop
+      ;Determine the number of orders and the minimum order spacing expected for each filter
+      case strlowcase(data_filters[0]) of
+        ;KS-band data has 29 orders and 15 pixels minimum between each order
+        'kgas': begin
+          n_orders = 29L
+          min_order_spacing = 15
+        end
+        ;K2-band data has 32 orders and 15 pixels minimum between each order
+        'k2': begin
+          n_orders = 32L
+          min_order_spacing = 15
+        end
+      endcase
+      
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders)
       save, file=order_mask_file, orders_mask_f, orders_structure_f, /compress
@@ -392,7 +396,7 @@ Pro ishell_reduction_master, data_path
   
   ;Determine the IDs that flat files would have for all science exposures.
   ;Basically we want to use the flats intended for that object, with the same filter and the same slit
-  science_flat_ids = tcs_obj[g_science]+'_'+data_filters[g_science]+'_'+data_slits[g_science] 
+  science_flat_ids = tcs_obj[g_science]+'|'+data_filters[g_science]+'|'+data_slits[g_science] 
   
   ;Loop on science targets to perform the data reduction
   for sci=0L, ng_science-1L do begin
