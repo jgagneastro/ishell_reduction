@@ -266,7 +266,7 @@ Pro ishell_reduction_master, data_path
     message, ' No flats were found in the data !'
   
   ;Determine all different flat field identifications from their comments
-  flat_ids = tcs_obj[g_flats]
+  flat_ids = tcs_obj[g_flats]+'_'+data_filters[g_flats]+'_'+data_slits[g_flats]
   bad = where(flat_ids eq '', nbad)
   if nbad ne 0L then flat_ids[bad] = 'BLANK'
   
@@ -372,6 +372,10 @@ Pro ishell_reduction_master, data_path
   spectra_dir = output_dir+'spectra'+path_sep()
   if ~file_test(spectra_dir) then file_mkdir, spectra_dir
   
+  ;Determine the IDs that flat files would have for all science exposures.
+  ;Basically we want to use the flats intended for that object, with the same filter and the same slit
+  science_flat_ids = tcs_obj[g_science]+'_'+data_filters[g_science]+'_'+data_slits[g_science] 
+  
   ;Loop on science targets to perform the data reduction
   for sci=0L, ng_science-1L do begin
     print, ' Extracting Exposure ['+strtrim(sci+1L,2L)+'/'+strtrim(ng_science,2L)+']: '+object_names[g_science[sci]]+' !'
@@ -380,7 +384,7 @@ Pro ishell_reduction_master, data_path
     data_file = fits_data[g_science[sci]]
     
     ;Select the proper flat field and order structure
-    g_flat_id = where(strlowcase(flat_ids_uniq) eq strlowcase(tcs_obj[g_science[sci]]), ngflat_id)
+    g_flat_id = where(strlowcase(flat_ids_uniq) eq strlowcase(science_flat_ids[sci]), ngflat_id)
     if ngflat_id eq 0L then begin
       message, ' No flat ID corresponding to object '+object_names[g_science[sci]]+' (TCS_OBJ = '+tcs_obj[g_science[sci]]+') was found, using generic flat field if possible...'
       g_flat_id = where(flat_ids_uniq eq 'BLANK', ngflat_id)
