@@ -13,7 +13,7 @@ Pro ishell_reduction_both_fringing_modes
 
   ;Whether or not to do debugging for trace order detection
   if debug_trace_order eq !NULL then $
-    debug_trace_orders = 1
+    debug_trace_orders = 0
 
   ;Whether or not darks should be subtracted
   if do_dark_subtraction eq !NULL then $

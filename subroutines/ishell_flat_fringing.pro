@@ -1,5 +1,5 @@
 Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORRECT_BLAZE_FUNCTION=correct_blaze_function, $
-  LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing
+  LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing, FRINGING_SOLUTION_1D=fringing_solution_1d
   ;This program (eventually function) takes an image of a raw or median-combined flat field "flat_image",
   ; and an "order_structure" correpsonding to the order that is needed. It will correct the fringing and return a
   ; fringing-corrected flat field that has a similar structure to the input "flat_image"
@@ -10,6 +10,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ; CORRECT_BLAZE_FUNCTION: If this option is set, the blaze function and lamp spectra will be removed from the flat field.
   ; LUMCORR_FLAT_FILE: Returns a flat file where the spectral structure of the lamp and blaze function are corrected.
   ; FRINGING_FLAT: Returns a file containing the fringing pattern only
+  ; FRINGING_SOLUTION_1D: Returns a 1D median fringing in each order
   ;
   ; It would be possible to make this code faster by skipping rows with only NaNs in horizontal_median.pro and probably elsewhere too.
   
@@ -62,6 +63,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   
   ;Number of orders to be parsed
   n_orders = n_elements(orders_structure)
+  fringing_solution_1d = dblarr(nx,n_orders)+!values.d_nan
   
   ;Loop on orders
   for i=0L, n_orders-1L do begin
@@ -134,6 +136,9 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     
     ;Create a smoothed version
     fringe_smooth = median(fringing_1d,fringe_nsmooth)
+    
+    ;Store in the 1D fringe correction
+    fringing_solution_1d[*,i] = fringe_smooth
     
     ;Define a 1D correction to be applied to the flat field
     correct_1d = dblarr(nx)+1d0

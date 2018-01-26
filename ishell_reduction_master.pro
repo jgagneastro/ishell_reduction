@@ -26,7 +26,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   
   ;Whether or not to do debugging for trace order detection
   if debug_trace_order eq !NULL then $
-    debug_trace_orders = 1
+    debug_trace_orders = 0
   
   ;Whether or not darks should be subtracted
   if do_dark_subtraction eq !NULL then $
@@ -376,13 +376,21 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     flat_field_file = flats_dir+'corr_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
     lumcorr_flat_field_file = flats_dir+'lumcorr_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
     fringe_flat_field_file = flats_dir+'fringe_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
+    if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
+      file_mkdir, flats_dir+'fringing_1d'+path_sep()
+    fringe_1d_file = flats_dir+'fringing_1d'+path_sep()+'fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]
+    fringe_1d_fits_file = flats_dir+'fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
     if file_test(flat_field_file) then begin
       flat_corrected = readfits(flat_field_file,/silent)
     endif else begin
       print, ' Correcting flat field for fringing, flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
-        CORRECT_FRINGING=correct_fringing_in_flatfield)
+        CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d)
+      ;Output 1D fringing solutions as text files
+      for no=0L, (size(fringing_solution_1d))[2]-1L do $
+        printuarr, fringe_1d_file+'_ORDER'+strtrim(no+1,2L)+'.txt', fringing_solution_1d[*,no]
+      writefits, fringe_1d_fits_file, fringing_solution_1d
       writefits, flat_field_file, flat_corrected
       writefits, lumcorr_flat_field_file, lumcorr_flat
       writefits, fringe_flat_field_file, fringing_flat
