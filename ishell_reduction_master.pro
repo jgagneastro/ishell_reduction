@@ -18,7 +18,7 @@ Pro ishell_reduction_master, data_path
   
   ;The path of the night which will be reduced
   if ~keyword_set(data_path) then $
-    data_path = '/Volumes/T3_EXT/iShell/raw_data/20161016UT/'
+    data_path = '/Volumes/bryson/iSHELL/Data/Raw/20171023UT/'
   
   ;Whether or not darks should be subtracted
   do_dark_subtraction = 0L
