@@ -170,15 +170,15 @@ Pro ishell_reduction_master, data_path
     print, ' A log file was just created at :'
     print, '   '+logfile
     print, ' Please review header information, make sure that object names are consistent and correct, (...)'
-    print, '   chose No instead of Yes to skip reducing any file, and make sure that all flats (...)
-    print, '   are named QTH. Flats can have an object name as a comment, in which case they will (...)
+    print, '   chose No instead of Yes to skip reducing any file, and make sure that all flats (...)'
+    print, '   are named QTH. Flats can have an object name as a comment, in which case they will (...)'
     print, '   be used with the appropriate object. When ready, launch this code again.'
     return
   endelse
   
   ;Verify that all files within that night's directory were taken with the same filter
   if min(data_filters eq data_filters[0]) eq 0 then $
-    message, 'All data within one night''s directory must be obtained with the same filter. If this is not the case, you need to split the data into separate directories. You do not need to split data obtained with or without gas cell." 
+    message, 'All data within one night''s directory must be obtained with the same filter. If this is not the case, you need to split the data into separate directories. You do not need to split data obtained with or without gas cell.'
   
   ;Determine the number of orders expected from the filter
   case strlowcase(data_filters[0]) of
