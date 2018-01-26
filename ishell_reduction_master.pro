@@ -24,7 +24,7 @@ Pro ishell_reduction_master, data_path
   output_dir_root = '/Volumes/bryson/iSHELL/redux/'
   
   ;Whether or not to do debugging for trace order detection
-  debug_trace_orders = 1
+  debug_trace_orders = 0
   
   ;Whether or not darks should be subtracted
   do_dark_subtraction = 0L
@@ -215,7 +215,7 @@ Pro ishell_reduction_master, data_path
   endif
   
   ;Identify all darks
-  g_darks = where(strpos(strlowcase(object_names),'dark') ne -1 and strlowcase(data_slits) eq 'mirror', ng_darks)
+  g_darks = where(strpos(strlowcase(object_names),'dark') ne -1 and strlowcase(data_slits) eq 'mirror' and strlowcase(do_reduce) eq 'yes', ng_darks)
   if ng_darks eq 0 then $
     message, ' No darks were found in the data !'
   
@@ -272,7 +272,7 @@ Pro ishell_reduction_master, data_path
   endelse
   
   ;Identify all flat fields
-  g_flats = where(object_names eq 'QTH' and strlowcase(gascell_position) eq 'out', ng_flats)
+  g_flats = where(object_names eq 'QTH' and strlowcase(gascell_position) eq 'out' and strlowcase(do_reduce) eq 'yes', ng_flats)
   if ng_flats eq 0 then $
     message, ' No flats were found in the data !'
   
