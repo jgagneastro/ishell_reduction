@@ -21,7 +21,7 @@ Pro ishell_reduction_master, data_path
     data_path = '/Volumes/bryson/iSHELL/Data/Raw/20171023UT/'
   
   ;The path where the data reduction products will be stored
-  output_dir_root = '/Volumes/T3_EXT/iShell/redux/'
+  output_dir_root = '/Volumes/bryson/iSHELL/redux/'
   
   ;Whether or not darks should be subtracted
   do_dark_subtraction = 0L
@@ -61,6 +61,9 @@ Pro ishell_reduction_master, data_path
   
   ;Header key for slit
   slit_header_key = 'SLIT'
+  
+  ;Header key for TCS object name
+  tcs_obj_header_key = 'TCS_OBJ'
   
   ;Threshold for bad pixel detection from deviations in terms of % of the flux
   bad_pixels_threshold = .08
@@ -142,6 +145,7 @@ Pro ishell_reduction_master, data_path
   object_names = sxpar_mul(fits_data,object_header_key)
   integration_times = sxpar_mul(fits_data,exptime_header_key)
   data_comments = sxpar_mul(fits_data,comment_header_key)
+  tcs_obj = sxpar_mul(fits_data,tcs_obj_header_key)
   gascell_position = sxpar_mul(fits_data,gascell_header_key)
   data_filters = sxpar_mul(fits_data,filter_header_key)
   data_slits = sxpar_mul(fits_data,slit_header_key)
@@ -149,6 +153,7 @@ Pro ishell_reduction_master, data_path
   ;Clean up header information
   strkill, object_names, ['=','''',',']
   strkill, data_comments, ['=','''',',']
+  strkill, tcs_obj, ['=','''',',']
   
   ;Check whether the log file exists
   logfile = output_dir+'logfile_'+file_basename(data_path)+'.txt'
@@ -163,22 +168,19 @@ Pro ishell_reduction_master, data_path
     if nbad ne 0L then do_reduce[bad] = 'No'
     
     ;Create an crude log file and put some header information in it 
-    printuarr, logfile, file_basename(fits_data), object_names, rtrim(integration_times,3), data_comments, $
-      gascell_position, data_filters, data_slits, do_reduce, title=[';File','Object','ExpTime','Comment','GasCell','Filter','Slit','Reduce'], $
+    printuarr, logfile, file_basename(fits_data), object_names, rtrim(integration_times,3), data_comments, tcs_obj, $
+      gascell_position, data_filters, data_slits, do_reduce, title=[';File','Object','ExpTime','Comment','TCS Object','GasCell','Filter','Slit','Reduce'], $
       /justify, symbol='|'
     
     print, ' A log file was just created at :'
     print, '   '+logfile
     print, ' Please review header information, make sure that object names are consistent and correct, (...)'
     print, '   chose No instead of Yes to skip reducing any file, and make sure that all flats (...)'
-    print, '   are named QTH. Flats can have an object name as a comment, in which case they will (...)'
+    print, '   are named QTH. Only flats with "Recude = Yes" will be used. (...)'
+    print, '   Flats can have an object name in their "TCS Object" header position, in which case they will (...)'
     print, '   be used with the appropriate object. When ready, launch this code again.'
     return
   endelse
-  
-  ;Verify that all files within that night's directory were taken with the same filter
-  ;if min(data_filters eq data_filters[0]) eq 0 then $
-  ;  message, 'All data within one night''s directory must be obtained with the same filter. If this is not the case, you need to split the data into separate directories. You do not need to split data obtained with or without gas cell.'
   
   ;Determine the number of orders expected from the filter
   case strlowcase(data_filters[0]) of
@@ -187,9 +189,9 @@ Pro ishell_reduction_master, data_path
   endcase
   
   ;Read the log file back
-  readcol, logfile, filenames_log, object_names, integration_times, data_comments, $
+  readcol, logfile, filenames_log, object_names, integration_times, data_comments, tcs_obj, $
     gascell_position, data_filters, data_slits, do_reduce, comment=';', delimiter='|', $
-    format='A,A,F,A,A,A,A,A', /silent
+    format='A,A,F,A,A,A,A,A,A', /silent
   
   ;Remove trailing spaces
   strtrim_multiple, filenames_log, object_names, data_comments, gascell_position, data_filters, data_slits, do_reduce
@@ -264,7 +266,7 @@ Pro ishell_reduction_master, data_path
     message, ' No flats were found in the data !'
   
   ;Determine all different flat field identifications from their comments
-  flat_ids = data_comments[g_flats]
+  flat_ids = tcs_obj[g_flats]
   bad = where(flat_ids eq '', nbad)
   if nbad ne 0L then flat_ids[bad] = 'BLANK'
   
@@ -378,12 +380,12 @@ Pro ishell_reduction_master, data_path
     data_file = fits_data[g_science[sci]]
     
     ;Select the proper flat field and order structure
-    g_flat_id = where(strlowcase(flat_ids_uniq) eq strlowcase(object_names[g_science[sci]]), ngflat_id)
+    g_flat_id = where(strlowcase(flat_ids_uniq) eq strlowcase(tcs_obj[g_science[sci]]), ngflat_id)
     if ngflat_id eq 0L then begin
-      message, ' No flat ID corresponding to '+object_names[g_science[sci]]+' was found, using generic flat field if possible...'
+      message, ' No flat ID corresponding to object '+object_names[g_science[sci]]+' (TCS_OBJ = '+tcs_obj[g_science[sci]]+') was found, using generic flat field if possible...'
       g_flat_id = where(flat_ids_uniq eq 'BLANK', ngflat_id)
       if ngflat_id eq 0L then $
-        message, ' No flat ID corresponding to '+object_names[g_science[sci]]+' was found, and no generic flat was found !'
+        message, ' No flat ID corresponding to object '+object_names[g_science[sci]]+' (TCS_OBJ = '+tcs_obj[g_science[sci]]+') was found, and no generic flat was found !'
     endif
     
     flat_field_corrected = flats_uniq_cube_corrected[*,*,g_flat_id[0L]]
