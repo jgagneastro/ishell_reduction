@@ -24,7 +24,7 @@ Pro ishell_reduction_master, data_path
   output_dir_root = '/Volumes/bryson/iSHELL/redux/'
   
   ;Whether or not to do debugging for trace order detection
-  debug_trace_orders = 0
+  debug_trace_orders = 1
   
   ;Whether or not darks should be subtracted
   do_dark_subtraction = 0L
@@ -216,60 +216,65 @@ Pro ishell_reduction_master, data_path
   
   ;Identify all darks
   g_darks = where(strpos(strlowcase(object_names),'dark') ne -1 and strlowcase(data_slits) eq 'mirror' and strlowcase(do_reduce) eq 'yes', ng_darks)
-  if ng_darks eq 0 then $
-    message, ' No darks were found in the data !'
+  if ng_darks eq 0 then begin
+    message, ' No darks were found in the data ! Skipping the dark subtraction step.', /continue
+    do_dark_subtraction = 0
+  endif
   
-  ;Identify all types of dark IDs (i.e., their exposure times)
-  darks_ids = rtrim(integration_times[g_darks],3)
+  if do_dark_subtraction eq 1 then begin
   
-  ;Create a set of unique dark IDs
-  darks_ids_uniq = darks_ids
-  darks_ids_uniq = darks_ids_uniq[sort(darks_ids_uniq)]
-  darks_ids_uniq = darks_ids_uniq[uniq(darks_ids_uniq)]
-  ndarks_uniq = n_elements(darks_ids_uniq)
+    ;Identify all types of dark IDs (i.e., their exposure times)
+    darks_ids = rtrim(integration_times[g_darks],3)
+    
+    ;Create a set of unique dark IDs
+    darks_ids_uniq = darks_ids
+    darks_ids_uniq = darks_ids_uniq[sort(darks_ids_uniq)]
+    darks_ids_uniq = darks_ids_uniq[uniq(darks_ids_uniq)]
+    ndarks_uniq = n_elements(darks_ids_uniq)
+    
+    ;If combined darks already exist, restore them
+    darks_dir = output_dir+'darks'+path_sep()
+    if ~file_test(darks_dir) then file_mkdir, darks_dir
+    comb_darks_file = darks_dir+'combined_darks_'+date_id+'.sav'
+    if file_test(comb_darks_file) then begin
+      restore, comb_darks_file;, darks_uniq_cube, nx, ny
+    endif else begin
   
-  ;If combined darks already exist, restore them
-  darks_dir = output_dir+'darks'+path_sep()
-  if ~file_test(darks_dir) then file_mkdir, darks_dir
-  comb_darks_file = darks_dir+'combined_darks_'+date_id+'.sav'
-  if file_test(comb_darks_file) then begin
-    restore, comb_darks_file;, darks_uniq_cube, nx, ny
-  endif else begin
-
-    print, ' Median-combining dark exposures...'
-
-    ;Create combined dark fields for each data ID
-    for f=0L, ndarks_uniq-1L do begin
-      ;Identify all darks with the appropriate ID
-      g_darks_f = where(darks_ids eq darks_ids_uniq[f], ng_darks_f)
-      darks_f = fits_data[g_darks[g_darks_f]]
-      ndarks_f = n_elements(darks_f)
-      ;Reset the darks cube
-      darks_f_cube = !NULL
-      ;Read the required darks
-      for subf=0L, ndarks_f-1L do begin
-        dark_im = double(readfits(darks_f[subf],/silent))
-
-        ;Determine array size and create a cube to store darks
-        if ~keyword_set(nx) then begin
-          nx = (size(dark_im))[1]
-          ny = (size(dark_im))[2]
-          darks_uniq_cube = dblarr(nx,ny,ndarks_uniq)+!values.d_nan
-        endif
-        if ~keyword_set(darks_f_cube) then $
-          darks_f_cube = dblarr(nx,ny,ndarks_f)+!values.d_nan
-        ;Store dark in cube
-        darks_f_cube[*,*,subf] = dark_im
+      print, ' Median-combining dark exposures...'
+  
+      ;Create combined dark fields for each data ID
+      for f=0L, ndarks_uniq-1L do begin
+        ;Identify all darks with the appropriate ID
+        g_darks_f = where(darks_ids eq darks_ids_uniq[f], ng_darks_f)
+        darks_f = fits_data[g_darks[g_darks_f]]
+        ndarks_f = n_elements(darks_f)
+        ;Reset the darks cube
+        darks_f_cube = !NULL
+        ;Read the required darks
+        for subf=0L, ndarks_f-1L do begin
+          dark_im = double(readfits(darks_f[subf],/silent))
+  
+          ;Determine array size and create a cube to store darks
+          if ~keyword_set(nx) then begin
+            nx = (size(dark_im))[1]
+            ny = (size(dark_im))[2]
+            darks_uniq_cube = dblarr(nx,ny,ndarks_uniq)+!values.d_nan
+          endif
+          if ~keyword_set(darks_f_cube) then $
+            darks_f_cube = dblarr(nx,ny,ndarks_f)+!values.d_nan
+          ;Store dark in cube
+          darks_f_cube[*,*,subf] = dark_im
+        endfor
+  
+        ;Median-combine the dark and store it in cube
+        darks_uniq_cube[*,*,f] = median(darks_f_cube,dim=3)
+        
+        ;Save the dark as a fits file
+        writefits, darks_dir+'dark_medcomb_'+date_id+'_TEXP'+darks_IDs_uniq[f]+'s.fits', darks_uniq_cube[*,*,f]
       endfor
-
-      ;Median-combine the dark and store it in cube
-      darks_uniq_cube[*,*,f] = median(darks_f_cube,dim=3)
-      
-      ;Save the dark as a fits file
-      writefits, darks_dir+'dark_medcomb_'+date_id+'_TEXP'+darks_IDs_uniq[f]+'s.fits', darks_uniq_cube[*,*,f]
-    endfor
-    save, darks_uniq_cube, nx, ny, file=comb_darks_file, /compress
-  endelse
+      save, darks_uniq_cube, nx, ny, file=comb_darks_file, /compress
+    endelse
+  endif
   
   ;Identify all flat fields
   g_flats = where(object_names eq 'QTH' and strlowcase(gascell_position) eq 'out' and strlowcase(do_reduce) eq 'yes', ng_flats)
