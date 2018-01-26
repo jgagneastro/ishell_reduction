@@ -608,7 +608,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         message, ' Could not properly build a trace profile ! (The spectrum is all NaNs, make sure the trace profile is OK)'
       
       ;Use a gaussian fit to precisely determine the center position of the profile
-      yfit_gauss = gaussfit(ytrace, trace_profile, gauss_parameters,ESTIMATES=[1d0,double(wmax),double(abs(right_cutoff-left_cutoff))*3d0/20d0],NTERMS=3L)
+      yfit_gauss = gaussfit2(ytrace, trace_profile, gauss_parameters,ESTIMATES=[1d0,double(wmax),double(abs(right_cutoff-left_cutoff))*3d0/20d0],NTERMS=3L)
       trace_max_pos = gauss_parameters[1L]
       
       ;Create and save a figure of the trace profile compared to a Gaussian fit (this is useful for debugging)

@@ -169,7 +169,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
       if total(~finite(vertical_slice)) gt 0 then continue
       gauss_par = !NULL
       estimates = [max(vertical_slice,/nan),double(running_window_height)/2d0,double(nvshift)/2d0*0.8553]
-      yfit = gaussfit(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
+      yfit = gaussfit2(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
       order_left_y_positions[j,i] = gauss_par[1]+y0
       last_position = order_left_y_positions[j,i]
     endfor
@@ -183,7 +183,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
       if total(~finite(vertical_slice)) gt 0 then continue
       gauss_par = !NULL
       estimates = [max(vertical_slice,/nan),double(running_window_height)/2d0,double(nvshift)/2d0*0.8553]
-      yfit = gaussfit(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
+      yfit = gaussfit2(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
       order_left_y_positions[j,i] = gauss_par[1]+y0
       last_position = order_left_y_positions[j,i]
     endfor
@@ -203,7 +203,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
       if total(~finite(vertical_slice)) gt 0 then continue
       gauss_par = !NULL
       estimates = [max(vertical_slice,/nan),double(running_window_height)/2d0,double(nvshift)/2d0*0.8553]
-      yfit = gaussfit(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
+      yfit = gaussfit2(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
       order_right_y_positions[j,i] = gauss_par[1]+y0
       last_position = order_right_y_positions[j,i]
     endfor
@@ -217,7 +217,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
       if total(~finite(vertical_slice)) gt 0 then continue
       gauss_par = !NULL
       estimates = [max(vertical_slice,/nan),double(running_window_height)/2d0,double(nvshift)/2d0*0.8553]
-      yfit = gaussfit(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
+      yfit = gaussfit2(dindgen(n_elements(vertical_slice)), vertical_slice, gauss_par,NTERMS=3,ESTIMATES=estimates)
       order_right_y_positions[j,i] = gauss_par[1]+y0
       last_position = order_right_y_positions[j,i]
     endfor
