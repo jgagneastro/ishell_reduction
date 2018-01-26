@@ -182,7 +182,8 @@ Pro ishell_reduction_master, data_path
   
   ;Determine the number of orders expected from the filter
   case strlowcase(data_filters[0]) of
-    'kcont': n_orders = 29L ;KS-band data has 29 orders  
+    'kcont': n_orders = 29L ;KS-band data has 29 orders
+    'k': n_orders = 32L ;K2-band has 32 orders
   endcase
   
   ;Read the log file back
