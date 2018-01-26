@@ -330,6 +330,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   endelse
   
   ;Build all orders masks
+  max_n_orders = 32L;This should always be updated when adding stuff to the case statement below
   orders_mask_cube = dblarr(nx,ny,nflat_uniq)+!values.d_nan
   for f=0L, nflat_uniq-1L do begin
     ;Verify whether this was already done and saved to disk
@@ -364,7 +365,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     if ~keyword_set(orders_structure_cube) then begin
       orders_structure_cube = orders_structure_f[0L]
       nan_str, orders_structure_cube
-      orders_structure_cube = replicate(orders_structure_cube,n_orders,nflat_uniq)
+      orders_structure_cube = replicate(orders_structure_cube,max_n_orders,nflat_uniq)
     endif
     orders_structure_cube[*,f] = orders_structure_f
   endfor
