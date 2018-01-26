@@ -253,11 +253,14 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   mid_chi2s = dblarr(n_orders)
   mid_medianchi2s = dblarr(n_orders)
   for i=0L, n_orders-1L do begin
+    ;Fit the left edges with a polynomial
     gfin = where(finite(order_left_y_positions[*,i]), ngfin)
     coeffs = reform(poly_fit(xarr[gfin],order_left_y_positions[gfin,i],ndegree_fit-1L))
     left_coeffs[i,*] = coeffs
     left_chi2s[i] = total((poly(xarr[gfin],coeffs)-order_left_y_positions[gfin,i])^2,/nan)/double(ngfin)
     left_medianchi2s[i] = median((poly(xarr[gfin],coeffs)-order_left_y_positions[gfin,i])^2)
+    
+    ;Fit the right edges with a polynomial
     gfin = where(finite(order_right_y_positions[*,i]), ngfin)
     coeffs = reform(poly_fit(xarr[gfin],order_right_y_positions[gfin,i],ndegree_fit-1L))
     right_coeffs[i,*] = coeffs
@@ -265,11 +268,26 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
     right_medianchi2s[i] = median((poly(xarr[gfin],coeffs)-order_right_y_positions[gfin,i])^2)
     gfin = where(finite(order_left_y_positions[*,i]) and finite(order_right_y_positions[*,i]), ngfin)
     
+    ;Fit the middle position of edges with a polynomial
     order_mid_pos = (order_left_y_positions[gfin,i]+order_right_y_positions[gfin,i])/2d0
     coeffs = reform(poly_fit(xarr[gfin],order_mid_pos,ndegree_fit-1L))
     mid_coeffs[i,*] = coeffs
     mid_chi2s[i] = total((poly(xarr[gfin],coeffs)-order_mid_pos)^2,/nan)/double(ngfin)
     mid_medianchi2s[i] = median((poly(xarr[gfin],coeffs)-order_mid_pos)^2)
+    
+    if keyword_set(debug) then begin
+      alldata = [order_left_y_positions[gfin,i],order_right_y_positions[gfin,i]]
+      yrange = [min(alldata,/nan),max(alldata,/nan)]
+      yrange += [-1,1]*(yrange[1]-yrange[0])*.05
+      plot, xarr[gfin],order_left_y_positions[gfin,i],xtitle='Pixel position',ytitle='Edge positions',title='Edges for Order #'+strtrim(i+1,2)+'/'+strtrim(n_orders,2)+' (Left, Right and Middle)',thick=2,linestyle=2,yrange=yrange,/ystyle,charsize=1.3
+      oplot, xarr[gfin],order_right_y_positions[gfin,i],thick=2,linestyle=2
+      oplot, xarr[gfin],order_mid_pos,thick=2,linestyle=0
+      
+      oplot, xarr, poly(xarr, left_coeffs[i,*]), col=255, linestyle=0
+      oplot, xarr, poly(xarr, right_coeffs[i,*]), col=255, linestyle=0
+      oplot, xarr, poly(xarr, mid_coeffs[i,*]), col=255, linestyle=0
+    endif
+    stop
   endfor
   
   ;Create an order mask image
