@@ -355,7 +355,7 @@ Pro ishell_reduction_master, data_path
       print, ' Correcting flat field for fringing, flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
-        CORRECT_FRINGING=correct_fringing_in_flatfield, N_ORDERS=n_orders)
+        CORRECT_FRINGING=correct_fringing_in_flatfield)
       writefits, flat_field_file, flat_corrected
       writefits, lumcorr_flat_field_file, lumcorr_flat
       writefits, fringe_flat_field_file, fringing_flat
