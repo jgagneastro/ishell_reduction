@@ -20,6 +20,9 @@ Pro ishell_reduction_master, data_path
   if ~keyword_set(data_path) then $
     data_path = '/Volumes/bryson/iSHELL/Data/Raw/20171023UT/'
   
+  ;The path where the data reduction products will be stored
+  output_dir_root = '/Volumes/T3_EXT/iShell/redux/'
+  
   ;Whether or not darks should be subtracted
   do_dark_subtraction = 0L
   
@@ -40,9 +43,6 @@ Pro ishell_reduction_master, data_path
   generate_individual_orders_trace_profile_figures = 1
   generate_residuals_fits_images = 1
   generate_2d_model_fits_images = 1
-  
-  ;The path where the data reduction products will be stored
-  output_dir_root = '/Volumes/T3_EXT/iShell/redux/'
   
   ;Header key for object name 
   object_header_key = 'OBJECT'

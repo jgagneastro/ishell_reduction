@@ -36,7 +36,7 @@ Function curcompdate, KEEPNIGHT=keepnight, DETAIL=detail, FORMAT=format, PATH=pa
 ;-
   
   compile_opt hidden ;Evite de toujours afficher 'Compiled module'
-  forward_function datewrite, sysjul, addzero, string_replace
+  forward_function datewrite, sysjul, addzero, getseed, string_replace
   on_error, 2
   
   if ~keyword_set(format) then format = 1
