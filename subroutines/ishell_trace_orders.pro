@@ -148,7 +148,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
     plot,lindgen(ny),detection_image_center
     oplot,left_positions,interpol(detection_image_center,lindgen(ny),left_positions),col=255,/ps
     oplot,right_positions,interpol(detection_image_center,lindgen(ny),right_positions),col=rvb_hex(100,255,100),/ps
-    ;stop
+    stop
   endif
   
   ;Drop the last left edge

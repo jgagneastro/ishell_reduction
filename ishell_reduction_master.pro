@@ -23,6 +23,9 @@ Pro ishell_reduction_master, data_path
   ;The path where the data reduction products will be stored
   output_dir_root = '/Volumes/bryson/iSHELL/redux/'
   
+  ;Whether or not to do debugging for trace order detection
+  debug_trace_orders = 1
+  
   ;Whether or not darks should be subtracted
   do_dark_subtraction = 0L
   
@@ -338,7 +341,7 @@ Pro ishell_reduction_master, data_path
       restore, order_mask_file;, orders_mask_f, orders_structure_f
     endif else begin
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing)
+      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders)
       save, file=order_mask_file, orders_mask_f, orders_structure_f, /compress
     endelse
     ;Store data in cubes
