@@ -336,9 +336,9 @@ Pro ishell_reduction_master, data_path
       restore, order_mask_file;, orders_mask_f, orders_structure_f
     endif else begin
       
-      stop
       ;Determine the number of orders and the minimum order spacing expected for each filter
-      case strlowcase(data_filters[0]) of
+      current_filter = (strsplit(flat_ids_uniq,'|',/extract))[1]
+      case strlowcase(current_filter) of
         ;KS-band data has 29 orders and 15 pixels minimum between each order
         'kgas': begin
           n_orders = 29L
