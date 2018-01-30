@@ -18,7 +18,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   
   ;The path of the night which will be reduced
   if ~keyword_set(data_path) then $
-    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT_debug/'
+    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
   
   ;The path where the data reduction products will be stored
   if ~keyword_set(output_dir_root) then $
@@ -345,7 +345,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     if ~file_test(order_mask_dir) then file_mkdir, order_mask_dir
     order_mask_file = order_mask_dir+'order_mask_'+date_id+'_ID_'+flat_ids_uniq[f]+'.sav'
     if file_test(order_mask_file) then begin
-      restore, order_mask_file;, orders_mask_f, orders_structure_f
+      restore, order_mask_file;, orders_mask_f, orders_structure_f, n_orders, min_order_spacing
     endif else begin
       
       ;Determine the number of orders and the minimum order spacing expected for each filter
@@ -361,6 +361,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
           n_orders = 32L
           min_order_spacing = 15
         end
+        else: message, 'There are no options set for filter ID '+strtrim(current_filter,2)
       endcase
       
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
@@ -389,7 +390,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       flat_corrected = readfits(flat_field_file,/silent)
     endif else begin
       print, ' Correcting flat field for fringing, flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[0:n_orders-1L,f], orders_mask_cube[*,*,f], $
+      flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
         CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d)
       ;Output 1D fringing solutions as text files
@@ -435,7 +436,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     endif
     
     flat_field_corrected = flats_uniq_cube_corrected[*,*,g_flat_id[0L]]
-    orders_structure = orders_structure_cube[0:n_orders-1L,g_flat_id[0L]]
+    orders_structure = orders_structure_cube[*,g_flat_id[0L]]
     orders_mask = orders_mask_cube[*,*,g_flat_id[0L]]
     
     ;If all orders of this exposure are already present, skip this exposure altogether
@@ -470,6 +471,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     
     ;Determine the amount of orders
     n_orders = n_elements(orders_structure)
+    message, ' Here I need to determine n_orders differently because sometimes the structure will contain NaNs'
     
     ;Create an X positions array
     nx = (size(data_im))[1]

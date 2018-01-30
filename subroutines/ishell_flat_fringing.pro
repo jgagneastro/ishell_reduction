@@ -64,6 +64,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ;Number of orders to be parsed
   n_orders = n_elements(orders_structure)
   fringing_solution_1d = dblarr(nx,n_orders)+!values.d_nan
+  message, ' Here I will need to automatically detect n_orders from orders_structure'
   
   ;Loop on orders
   for i=0L, n_orders-1L do begin
