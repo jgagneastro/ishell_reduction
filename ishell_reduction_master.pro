@@ -469,9 +469,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     ;Flat-field the data
     data_im /= flat_field_corrected
     
-    ;Determine the amount of orders
-    n_orders = n_elements(orders_structure)
-    message, ' Here I need to determine n_orders differently because sometimes the structure will contain NaNs'
+    ;Determine the number of orders
+    good_orders = where(orders_structure.order_id ge 0,n_orders)
     
     ;Create an X positions array
     nx = (size(data_im))[1]
