@@ -349,7 +349,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     endif else begin
       
       ;Determine the number of orders and the minimum order spacing expected for each filter
-      current_filter = (strsplit(flat_ids_uniq,'|',/extract))[1]
+      current_filter = (strsplit(flat_ids_uniq[f],'|',/extract))[1]
       case strlowcase(current_filter) of
         ;KS-band data has 29 orders and 15 pixels minimum between each order
         'kgas': begin
