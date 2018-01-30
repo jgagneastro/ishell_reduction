@@ -277,32 +277,33 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     endelse
   endif
   
-  ;Identify all flat fields
-  g_flats = where(object_names eq 'QTH' and strlowcase(gascell_position) eq 'out' and strlowcase(do_reduce) eq 'yes', ng_flats)
-  if ng_flats eq 0 then $
-    message, ' No flats were found in the data !'
-  
-  ;Determine all different flat field identifications from their comments
-  flat_ids = tcs_obj[g_flats]+'|'+data_filters[g_flats]+'|'+data_slits[g_flats]
-  bad = where(flat_ids eq '', nbad)
-  if nbad ne 0L then flat_ids[bad] = 'BLANK'
-  
-  ;Create a set of unique flat IDs
-  flat_ids_uniq = flat_ids
-  flat_ids_uniq = flat_ids_uniq[sort(flat_ids_uniq)]
-  flat_ids_uniq = flat_ids_uniq[uniq(flat_ids_uniq)]
-  nflat_uniq = n_elements(flat_ids_uniq)
-  
   ;If combined flats already exist, restore them
   nx = !NULL
   flats_dir = output_dir+'flats'+path_sep()
   if ~file_test(flats_dir) then file_mkdir, flats_dir
   comb_flats_file = flats_dir+'combined_flats_'+date_id+'.sav'
   if file_test(comb_flats_file) then begin
-    restore, comb_flats_file;, flats_uniq_cube, nx, ny
+    restore, comb_flats_file;, flats_uniq_cube, nx, ny, flat_ids_uniq, nflat_uniq
+    stop
   endif else begin
     
     print, ' Median-combining flat field exposures...'
+    
+    ;Identify all flat fields
+    g_flats = where(object_names eq 'QTH' and strlowcase(gascell_position) eq 'out' and strlowcase(do_reduce) eq 'yes', ng_flats)
+    if ng_flats eq 0 then $
+      message, ' No flats were found in the data !'
+
+    ;Determine all different flat field identifications from their comments
+    flat_ids = tcs_obj[g_flats]+'|'+data_filters[g_flats]+'|'+data_slits[g_flats]
+    bad = where(flat_ids eq '', nbad)
+    if nbad ne 0L then flat_ids[bad] = 'BLANK'
+
+    ;Create a set of unique flat IDs
+    flat_ids_uniq = flat_ids
+    flat_ids_uniq = flat_ids_uniq[sort(flat_ids_uniq)]
+    flat_ids_uniq = flat_ids_uniq[uniq(flat_ids_uniq)]
+    nflat_uniq = n_elements(flat_ids_uniq)
     
     ;Create combined flat fields for each data ID
     for f=0L, nflat_uniq-1L do begin
@@ -333,7 +334,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       ;Median-combine the flat field and store it in cube
       flats_uniq_cube[*,*,f] = median(flat_f_cube,dim=3)
     endfor
-    save, flats_uniq_cube, nx, ny, file=comb_flats_file, /compress
+    save, flats_uniq_cube, nx, ny, flat_ids_uniq, nflat_uniq, file=comb_flats_file, /compress
   endelse
   
   ;Build all orders masks
