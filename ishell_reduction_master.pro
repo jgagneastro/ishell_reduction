@@ -18,11 +18,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   
   ;The path of the night which will be reduced
   if ~keyword_set(data_path) then $
-    data_path = '/Volumes/bryson/iSHELL/Data/Raw/20171023UT/'
+    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT_debug/'
   
   ;The path where the data reduction products will be stored
   if ~keyword_set(output_dir_root) then $
-    output_dir_root = '/Volumes/bryson/iSHELL/redux/'
+    output_dir_root = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/redux/'
   
   ;Whether or not to do debugging for trace order detection
   if debug_trace_order eq !NULL then $
@@ -365,7 +365,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders)
-      save, file=order_mask_file, orders_mask_f, orders_structure_f, /compress
+      save, file=order_mask_file, orders_mask_f, orders_structure_f, n_orders, min_order_spacing, /compress
     endelse
     ;Store data in cubes
     orders_mask_cube[*,*,f] = orders_mask_f
@@ -374,7 +374,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       nan_str, orders_structure_cube
       orders_structure_cube = replicate(orders_structure_cube,max_n_orders,nflat_uniq)
     endif
-    orders_structure_cube[*,f] = orders_structure_f
+    orders_structure_cube[0:n_orders-1L,f] = orders_structure_f
   endfor
   
   ;Correct flat fields for fringing
@@ -389,7 +389,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       flat_corrected = readfits(flat_field_file,/silent)
     endif else begin
       print, ' Correcting flat field for fringing, flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
+      flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[0:n_orders-1L,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
         CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d)
       ;Output 1D fringing solutions as text files
@@ -435,7 +435,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     endif
     
     flat_field_corrected = flats_uniq_cube_corrected[*,*,g_flat_id[0L]]
-    orders_structure = orders_structure_cube[*,g_flat_id[0L]]
+    orders_structure = orders_structure_cube[0:n_orders-1L,g_flat_id[0L]]
     orders_mask = orders_mask_cube[*,*,g_flat_id[0L]]
     
     ;If all orders of this exposure are already present, skip this exposure altogether
