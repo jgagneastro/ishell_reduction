@@ -4,9 +4,10 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   ; Version 1.0: First stable version (J. Gagne)
   ; Version 1.1: Added outputs of polynomial coefficients for Ytrace pos and seeing versus X pixel in ASCII format (J. Gagne), March 3, 2017
   ; Version 1.2: Added N_orders keyword for compatibility with K band, January 26, 2018
+  ; Version 1.3: More fixes for mixed bands in a single night, added an option to remove column-dependent detector patterns from the data, January 31, 2018
   
   ;Code version for headers
-  code_version = 1.2
+  code_version = 1.3
   
   ;List of subroutines
   forward_function readfits,ishell_trace_orders,ishell_flat_fringing,interpol2,weighted_median,horizontal_median,$
@@ -31,6 +32,10 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   ;Whether or not darks should be subtracted
   if do_dark_subtraction eq !NULL then $
     do_dark_subtraction = 0L
+  
+  ;Whether or not column-dependent detector patterns should be preserved in the flat fields and therefore removed from the data
+  if remove_detector_patterns_from_data eq !NULL then $
+    remove_detector_patterns_from_data = 1L
   
   ;Whether fringing should be corrected in the flat field
   if correct_fringing_in_flatfield eq !NULL then $
@@ -394,6 +399,21 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
         CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d)
+      
+      ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
+      if remove_detector_patterns_from_data eq 1 then begin
+        detector_patterns = median(fringing_solution_1d,dim=2)
+        
+        ;Remove detector patterns from flat and fringing solutions
+        fringing_solution_1d /= (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+        detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
+        fringing_flat /= detector_patterns_ny
+        
+        ;Add back detector patterns in flats
+        flat_corrected *= detector_patterns_ny
+        lumcorr_flat *= detector_patterns_ny
+      endif
+      
       ;Output 1D fringing solutions as text files
       if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
         file_mkdir, flats_dir+'fringing_1d'+path_sep()
@@ -961,6 +981,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       sxaddpar, header, 'DRKCURR', dark_current, 'dark current in electrons per second'
       sxaddpar, header, 'DATE_RED', curcompdate(), 'Date of reduction YYMMDD' 
       sxaddpar, header, 'CODEVER', code_version, 'Version of data reduction code'
+      sxaddpar, header, 'RMDTPTRN', remove_detector_patterns_from_data, 'Remove detector patterns from data'
       
       ;Write the data to a file
       openw, lun, output_file, /get_lun
