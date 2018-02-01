@@ -289,7 +289,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   comb_flats_file = flats_dir+'combined_flats_'+date_id+'.sav'
   if file_test(comb_flats_file) then begin
     restore, comb_flats_file;, flats_uniq_cube, nx, ny, flat_ids_uniq, nflat_uniq
-    stop
   endif else begin
     
     print, ' Median-combining flat field exposures...'
