@@ -305,7 +305,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;plot,detector_patterns-1,yrange=[-.03,.04] & for i=0L, 32L do oplot, i*64+[0,0], [-10,10], col=255 & oplot,detector_patterns-1
     
     ;Create a 2D version of the detector patterns
-    detector_patterns = (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+    detector_patterns_2d = (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
     
     ;Smooth the fringing solution w/o detector patterns to eliminate any pixel-to-pixel
     ; sensitivity variations which should remain in the flat field
