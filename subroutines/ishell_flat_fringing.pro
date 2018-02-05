@@ -1,5 +1,7 @@
 Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORRECT_BLAZE_FUNCTION=correct_blaze_function, $
-  LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing, FRINGING_SOLUTION_1D=fringing_solution_1d
+  LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing, $
+  FRINGING_SOLUTION_1D=fringing_solution_1d, FRINGE_NSMOOTH=fringe_nsmooth, MODEL_FRINGING=model_fringing, $
+  DETECTOR_PATTENRS=detector_patterns
   ;This program (eventually function) takes an image of a raw or median-combined flat field "flat_image",
   ; and an "order_structure" correpsonding to the order that is needed. It will correct the fringing and return a
   ; fringing-corrected flat field that has a similar structure to the input "flat_image"
@@ -14,7 +16,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ;
   ; It would be possible to make this code faster by skipping rows with only NaNs in horizontal_median.pro and probably elsewhere too.
   
-  forward_function interpol2,horizontal_median
+  forward_function interpol2, horizontal_median, ishell_fringing_1d_model
   
   if ~keyword_set(flat_image) or ~keyword_set(orders_structure) or ~keyword_set(orders_mask) then $
     message, ' You must input a flat image, an orders structure and an orders mask'
@@ -39,7 +41,8 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   nhsmooth = 45L
   
   ;Box size for smoothing the fringe pattern (this should be close to the Nyquist sampling)
-  fringe_nsmooth = 3L
+  if ~keyword_set(fringe_nsmooth) then $
+    fringe_nsmooth = 3L
   
   ;This is the lowest allowed fraction of flux in any pixel of the flat field. Otherwise they will be masked
   min_allowed_flux = .3
@@ -68,7 +71,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ;Loop on orders
   for i=0L, n_orders-1L do begin
     
-    print, ' Correcting flat field order #['+strtrim(i+1L,2)+'/'+strtrim(n_orders,2L)+'] ...'
+    print, '  Bringing out fringing in flat field order #['+strtrim(i+1L,2)+'/'+strtrim(n_orders,2L)+'] ...'
     
     ;Height of order
     height = ceil(orders_structure[i].height)
@@ -90,10 +93,10 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;Actually do the straightening of the flat
     order_center_location = poly(xarr,orders_structure[i].mid_coeffs)
     subyarr = dindgen(height)
-    for l=0L, nx-1L do begin
+    for l=0L, nx-1L do begin & $
       ;Skip this column if the order is partially out of frame
-      if (order_center_location[l]-height/2d0) le 0 then continue
-      straight_flat_order[l,*] = interpol2(order_image[l,*],yarr,(order_center_location[l]-height/2d0)+subyarr,/repairnans)
+      if (order_center_location[l]-height/2d0) le 0 then continue & $
+      straight_flat_order[l,*] = interpol2(order_image[l,*],yarr,(order_center_location[l]-height/2d0)+subyarr,/repairnans) & $
     endfor
     
     ;Mask the regions outside of the trace
@@ -134,8 +137,16 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;Create a 1D version of the fringing
     fringing_1d = median(fringing_image,dim=2)
     
-    ;Create a smoothed version
-    fringe_smooth = median(fringing_1d,fringe_nsmooth)
+    ;If fringing will be modeled, horizontal smooth will be applied at the very end
+    if keyword_set(model_fringing) then begin
+      fringe_smooth = fringing_1d
+    endif else begin
+      ;Create a horizontally smoothed version of the fringing
+      if fringe_nsmooth gt 1 then $
+        fringe_smooth = median(fringing_1d,fringe_nsmooth) $
+      else $
+        fringe_smooth = fringing_1d
+    endelse
     
     ;Store in the 1D fringe correction
     fringing_solution_1d[*,i] = fringe_smooth
@@ -189,6 +200,129 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     final_flat[0:nmask_left_cols-1L,*] = !values.d_nan
   if keyword_set(nmask_right_cols) then $
     final_flat[-nmask_right_cols:*,*] = !values.d_nan
+  
+  ;If this keyword is set, fringing will be modeled with a 1-component variable-period sine
+  ; This model will then be used to separate the fringing from other column-dependent detector
+  ; patterns, and will leave the detector patterns in the flat fields. 
+  if keyword_set(model_fringing) then begin
+    ;nrowi = n_orders
+    
+    ;Number of parameters in the fringing model
+    n_parameters = 4L
+    
+    ;Number of "walkers" that will independently run a Levenberg-Marquardt least-squares fitting
+    ; A large number requires more CPU but will be more robust against local minima
+    nfit = 40
+    
+    ;Initiate arrays that will contain the best-fitting parameters and the models
+    model_pars = dblarr(4L,n_orders)+!values.d_nan
+    models = dblarr(nx,n_orders)+!values.d_nan
+    
+    ;Pixel column indices on which to perform the fit
+    min_fit_index = 400L
+    max_fit_index = 1500L
+    
+    ;Defaut parameter estimates
+    fit_par_estim = [0d0,$;Amplitude
+      36.5d0,$;Period (pixels)
+      0d0,$;Phase (radian)
+      -0.0015d0];Period slope (pixel period / pixel = no units)
+    
+    ;Typical variations to be explored by the N walkers in parameter space
+    fit_par_scatter = [0d0,$;Amplitude
+      5d0,$;Period (pixels)
+      !dpi/10d0,$;Phase (radian)
+      1d-4];Period slope (pixel period / pixel = no units)
+    
+    ;Fit fringing in each order
+    for rowi=0L, n_orders-1L do begin
+      
+      ;Data to be fitted with the fringing model
+      print, '  Modeling fringing in flat field order #['+strtrim(rowi+1L,2)+'/'+strtrim(n_orders,2L)+'] ...'
+      
+      fit_y = fringing_solution_1d[min_fit_index:max_fit_index,rowi]
+      fit_x = dindgen(n_elements(fit_y))+min_fit_index
+      
+      ;Adjust estimated amplitude
+      fit_par_estim[0] = weighted_median(abs(fit_y-1d0),medval=.9)
+      
+      ;Adjust amplitude variations to be explored
+      fit_par_scatter[0] = fit_par_estim/1d2
+      
+      ;Create random initial positions for the walkers 
+      fit_par_noise = fit_par_estim#make_array(nfit,value=1d0,/double) + (fit_par_scatter#make_array(nfit,value=1d0,/double))*randomn(seed,n_elements(fit_par_estim),nfit)
+      fit_par_noise[*,0] = fit_par_estim
+      
+      ;Arrays to store reduced chi squares and parameter values
+      redchi2s = dblarr(nfit)+!values.d_nan & $
+      fitpars = dblarr(n_elements(fit_par_estim),nfit)+!values.d_nan & $
+      
+      ;Perform least-squares fitting for each walker
+      for fiti=0L, nfit-1L do begin
+        fit_pari = mpfitfun('ishell_fringing_1d_model',fit_x,fit_y,1d0,fit_par_noise[*,fiti],YFIT=yfit,status=status,err=err,/nan,/quiet)
+        ;Calculate reduced chi2 using only finite pixels
+        redchi2s[fiti] = total((fit_y-yfit)^2,/nan)/double(total(finite(fit_y-yfit)))
+        fitpars[*,fiti] = fit_pari
+      endfor
+      
+      ;Idenfity the best (minimum) chi2 and select that solution
+      void = min(redchi2s,wmin)
+      fit_par = fitpars[*,wmin]
+      
+      ;Optional: Display best fit
+      ;plot,fit_x,fit_y, xtitle=strtrim(rowi,2) & oplot, fit_x, ishell_fringing_1d_model(fit_x,fit_par), col=255
+      
+      ;Store best fit parameters and model
+      model_pars[*,rowi] = fit_par
+      models[*,rowi] = ishell_fringing_1d_model(dindgen(nx),fit_par)
+    endfor
+    
+    ;Transform negative amplitudes to a pi phase shift
+    gneg = where(reform(model_pars[0,*]) lt 0, ngneg)
+    if ngneg ne 0L then model_pars[0,gneg] *= -1
+    if ngneg ne 0L then model_pars[2,gneg] += !dpi
+    model_pars[2,*] = ((model_pars[2,*]+2*!dpi) mod (!dpi*2d0))
+    
+    ;Take an extremely horizontally smoothed version of the observed fringing to bring out Blaze function of this order   
+    nsmooth_fringe_blaze = 100L
+    fringe_blaze_function = smooth(median(max(fringing_solution_1d,dim=2,/nan),nsmooth_fringe_blaze),nsmooth_fringe_blaze)
+    
+    ;Normalize the Blaze function appropriately and mask the edges
+    fringe_blaze_function = (fringe_blaze_function-1.)/max((fringe_blaze_function-1.),/nan)
+    fringe_blaze_function[0:nsmooth_fringe_blaze] = 0.
+    fringe_blaze_function[-nsmooth_fringe_blaze:*] = 0.
+    
+    ;Create a model that includes the Blaze function
+    model_with_edges = (fringe_blaze_function#make_array((size(fringing_solution_1d))[2],value=1d0,/double))*(models-1.)+1.
+    
+    ;Bring out detector patterns by dividing observed fringing by fringing model
+    ; and then taking a vertical median to average out any fringing model residual
+    ; We are seeking column-dependent detector patterns so those will survive a vertical median
+    ; (observed fringing contains not only true fringing but also detector patterns) 
+    detector_patterns = median(fringing_solution_1d/model_with_edges,dim=2)
+    
+    ;Optional: Figure displaying detector patterns and detector "breaks" at 64-pixels steps
+    ;plot,detector_patterns-1,yrange=[-.03,.04] & for i=0L, 32L do oplot, i*64+[0,0], [-10,10], col=255 & oplot,detector_patterns-1
+    
+    ;Create a 2D version of the detector patterns
+    detector_patterns = (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+    
+    ;Smooth the fringing solution w/o detector patterns to eliminate any pixel-to-pixel
+    ; sensitivity variations which should remain in the flat field
+    fringing_no_detector_patterns = fringing_solution_1d/detector_patterns_2d
+    for sri=0L, (size(fringing_solution_1d))[2]-1L do $
+      fringing_no_detector_patterns[*,sri] = median(fringing_no_detector_patterns[*,sri],fringe_nsmooth)
+    
+    ;Remove detector patterns from flat and fringing solutions
+    fringing_solution_1d /= (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+    detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
+    fringing_flat /= detector_patterns_ny
+    
+    ;Put back the detector patterns in flat fields
+    final_flat *= detector_patterns_ny
+    lumcorr_flat *= detector_patterns_ny
+    
+  endif
   
   ;Pass the final flat to main
   return, final_flat
