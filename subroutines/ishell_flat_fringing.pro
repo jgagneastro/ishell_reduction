@@ -171,9 +171,11 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       message, 'No order positions were found !'
     final_flat[g_within_order] = flatfield_corrected[g_within_order]
     
-    ;Create a fringing flat
-    fringing_rep = fringe_smooth#make_array(ny,value=1d0,/double)
-    fringing_flat[g_within_order] = fringing_rep[g_within_order]
+    ;Create a fringing flat (if model_fringing = 1 this will be done later)
+    if model_fringing eq 0 then begin
+      fringing_rep = fringe_smooth#make_array(ny,value=1d0,/double)
+      fringing_flat[g_within_order] = fringing_rep[g_within_order]
+    endif
     
     ;Create a temporary version of a fully corrected flat field to mask pixels that are too dark
     fringing_specres_rep = (fringe_smooth*spectral_profile)#make_array(ny,value=1d0,/double)
@@ -235,6 +237,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       1d-4];Period slope (pixel period / pixel = no units)
     
     ;Fit fringing in each order
+    message, ' Replace rowi with just i, or oi', /continue
     for rowi=0L, n_orders-1L do begin
       
       ;Data to be fitted with the fringing model
@@ -305,13 +308,31 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;plot,detector_patterns-1,yrange=[-.03,.04] & for i=0L, 32L do oplot, i*64+[0,0], [-10,10], col=255 & oplot,detector_patterns-1
     
     ;Create a 2D version of the detector patterns
+    ;Replace (size(fringing_solution_1d))[2]
     detector_patterns_2d = (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
     
     ;Smooth the fringing solution w/o detector patterns to eliminate any pixel-to-pixel
     ; sensitivity variations which should remain in the flat field
     fringing_no_detector_patterns = fringing_solution_1d/detector_patterns_2d
+    ;replace (size(fringing_solution_1d))[2] with n_orders
     for sri=0L, (size(fringing_solution_1d))[2]-1L do $
       fringing_no_detector_patterns[*,sri] = median(fringing_no_detector_patterns[*,sri],fringe_nsmooth)
+    
+;   ;Recreate the fringing flat image
+;   fringing_no_detector_patterns_2d = fringing_no_detector_patterns#make_array(ny,value=1d0,/double)
+;    g_within_order = where(orders_mask eq orders_structure[rowi].order_id, ng_within_order)
+;    if ng_within_order eq 0L then $
+;      message, 'No order positions were found !'
+;    fringing_flat[g_within_order] = fringing_no_detector_patterns_2d[g_within_order]
+;   
+;   ;Mask dark regions of the fringing_flat
+;   bad = where(~finite(final_flat[g_within_order]), nbad)
+;   if nbad ne 0L then $
+;     fringing_flat[g_within_order[bad]] = !values.d_nan
+   
+   ;fringing_solution_1d = fringing_no_detector_patterns
+   
+    message, ' Set fringing_solution_1d = fringing_no_detector_patterns. Remove line below fringing_solution_1d /= detector_patterns', /continue
     
     ;Remove detector patterns from flat and fringing solutions
     fringing_solution_1d /= (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))

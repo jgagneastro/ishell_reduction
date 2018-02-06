@@ -1,5 +1,10 @@
+;DONE: ishell_reduction_master
+;"simple block filter" ishell_reduction_master,model_fringing=0,remove_detector_patterns_from_data=1
+;"noflats": ishell_reduction_master,/override_flats,model_fringing=0,correct_fringing_in_flatfield=0
+;>>ishell_reduction_master,model_fringing=0,correct_fringing_in_flatfield=0
 Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug_trace_order, DO_DARK_SUBTRACTION=do_dark_subtraction, $
-  CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing
+  CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
+  REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats
   ;Code version history
   ; - The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
   ; Version 1.0: First stable version (J. Gagne)
@@ -505,7 +510,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       
       ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
       if remove_detector_patterns_from_data eq 1 then begin
-        ;THIS "IF" BLOCK IS OBSOLETE
         
         detector_patterns_block_size = 64L
         
@@ -546,6 +550,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       writefits, lumcorr_flat_field_file, lumcorr_flat
       writefits, fringe_flat_field_file, fringing_flat
     endelse
+    
+    ;If flat field correction is to be overrided
+    if keyword_set(override_flats) then $
+      flat_corrected[*] = 1d0
+    
     flats_uniq_cube_corrected[*,*,f] = flat_corrected
   endfor
   
@@ -997,6 +1006,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
           badpix_mask[bad] = 0.0
         
         ;Recreate a 2D profile
+        message, ' Do not trust these best fit parameters for the trace shape, just use the model to flag bad pixels. This is what caused continuum to crap out sometimes', /continue
         refined_again_coefficients = best_fit_parameters[0:ndegree_poly_fit-1L]
         sigma_coefficients = best_fit_parameters[ndegree_poly_fit:*]
         sigma = poly(xmap, sigma_coefficients)
