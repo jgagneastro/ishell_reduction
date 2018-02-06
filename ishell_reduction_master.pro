@@ -1103,6 +1103,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       sxaddpar, header, 'DARK_SUB', do_dark_subtraction, 'Whether darks were subtracted'
       sxaddpar, header, 'BLZ_CORR', correct_blaze_function_in_flatfield, 'Whether the blaze fcn was corrected in flats'
       sxaddpar, header, 'FRG_CORR', correct_fringing_in_flatfield, 'Whether the fringing was corrected in flats'
+      sxaddpar, header, 'MOD_FRG', model_fringing, 'Whether the fringing modelled to better remove it'
       sxaddpar, header, 'HNPX_AVD', edge_npix_avoid, 'Number of additional avoided edge pixels'
       sxaddpar, header, 'HNPX_MSK', edge_npix_mask, 'Number of masked horizontal edge pixels'
       sxaddpar, header, 'BPIX_TD', bad_pixels_threshold, 'The fractional threshold for bad pixels'
@@ -1120,7 +1121,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       sxaddpar, header, 'DRKCURR', dark_current, 'dark current in electrons per second'
       sxaddpar, header, 'DATE_RED', curcompdate(), 'Date of reduction YYMMDD' 
       sxaddpar, header, 'CODEVER', code_version, 'Version of data reduction code'
-      sxaddpar, header, 'RMDTPTRN', remove_detector_patterns_from_data, 'Remove detector patterns from data'
+      sxaddpar, header, 'RMDTPTRN', remove_detector_patterns_from_data, 'Remove detector patterns with block median'
+      sxaddpar, header, 'NOFLATS', override_flats, '/override_flats flag to skip flat field correction'
       
       ;Write the data to a file
       openw, lun, output_file, /get_lun
