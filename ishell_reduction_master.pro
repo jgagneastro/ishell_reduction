@@ -1,7 +1,7 @@
 ;DONE: ishell_reduction_master
 ;"simple block filter" ishell_reduction_master,model_fringing=0,remove_detector_patterns_from_data=1
 ;"noflats": ishell_reduction_master,/override_flats,model_fringing=0,correct_fringing_in_flatfield=0
-;>>ishell_reduction_master,model_fringing=0,correct_fringing_in_flatfield=0
+;>>"nofringing_corr_": ishell_reduction_master,model_fringing=0,correct_fringing_in_flatfield=0
 Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug_trace_order, DO_DARK_SUBTRACTION=do_dark_subtraction, $
   CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
   REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats
@@ -28,11 +28,18 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   if ~keyword_set(data_path) then $
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_night1/'
-    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
+    ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
+    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
   
   ;The path where the data reduction products will be stored
   if ~keyword_set(output_dir_root) then $
     output_dir_root = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/redux/'
+  
+  ;Make sure that paths end with a path separator
+  if strmid(data_path,0,1) ne path_sep() then $
+    data_path += path_sep()
+  if strmid(output_dir_root,0,1) ne path_sep() then $
+    output_dir_root += path_sep()
   
   ;Whether or not to do debugging for trace order detection
   if debug_trace_order eq !NULL then $
