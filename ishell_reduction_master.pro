@@ -1,17 +1,23 @@
-;DONE: ishell_reduction_master
+;"normal run": ishell_reduction_master
 ;"simple block filter" ishell_reduction_master,model_fringing=0,remove_detector_patterns_from_data=1
 ;"noflats": ishell_reduction_master,/override_flats,model_fringing=0,correct_fringing_in_flatfield=0
-;>>"nofringing_corr_": ishell_reduction_master,model_fringing=0,correct_fringing_in_flatfield=0
+;"nofringing_corr_": ishell_reduction_master,model_fringing=0,correct_fringing_in_flatfield=0
 Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug_trace_order, DO_DARK_SUBTRACTION=do_dark_subtraction, $
   CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
-  REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats
+  REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats, $
+  MODEL_REFINEMENT_CURVATURE=model_refinement_curvature
   ;Code version history
-  ; - The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
+  ; The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
   ; Version 1.0: First stable version (J. Gagne)
   ; Version 1.1: Added outputs of polynomial coefficients for Ytrace pos and seeing versus X pixel in ASCII format (J. Gagne), March 3, 2017
   ; Version 1.2: Added N_orders keyword for compatibility with K band, January 26, 2018
   ; Version 1.3: More fixes for mixed bands in a single night, added an option to remove column-dependent detector patterns from the data, January 31, 2018
   ; Version 1.4: Added option to model fringing to separate it from the column-dependent detector patterns. February 4, 2018
+  ;
+  ;Planned modifications:
+  ; - Save detector patterns and fringing model if model_fringing = 1
+  ; - Fix continuum problems with low SNR data
+  ; - Improve bad pixel rejection algorithm with low SNR data 
   
   ;Code version for headers
   code_version = 1.4
@@ -62,6 +68,13 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   ;Whether fringing should be corrected in the flat field
   if correct_fringing_in_flatfield eq !NULL then $
     correct_fringing_in_flatfield = 1
+  
+  ;Whether to use 2D modelling of the trace to refine trace curvature.
+  ; This also allows a linear seeing dependence over spatial pixel position
+  ; However this was found to cause bad model curvatures when the PSF is weird
+  ; enough on low SNR data, hence we set it off by default. 
+  if model_refinement_curvature eq !NULL then $
+    model_refinement_curvature = 0L
   
   ;Avoid N pixels on each side of the detector when normalizing
   edge_npix_avoid = 200L
@@ -421,99 +434,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
         CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=fringe_nsmooth, $
         MODEL_FRINGING=model_fringing)
-      
-      ;Try to fit a model to the fringing
-      ;min_fit_index = 800L
-      ;max_fit_index = 1200L
-      
-      ;=====================================
-      ;START OF: NEW METHOD -- All of this should be moved inside of "ishell_flat_fringing.pro" 
-      ;=====================================
-      
-;      ;Extract fringing without horizontal smoothing so that we can bring out the detector patterns
-;      flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
-;        CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
-;          CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=fringe_nsmooth, $
-;          MODEL_FRINGING=model_fringing)
-      
-;      nrowi = (size(fringing_solution_1d))[2]
-;      model_pars = dblarr(4L,nrowi)+!values.d_nan
-;      models = dblarr(nx,nrowi)+!values.d_nan
-;      nfit = 40
-;      for rowi=0L, nrowi-1L do begin & $
-;        min_fit_index = 400L & $
-;        max_fit_index = 1500L & $
-;        ;Data to be fitted
-;        fit_y = fringing_solution_1d[min_fit_index:max_fit_index,rowi] & $
-;        fit_x = dindgen(n_elements(fit_y))+min_fit_index & $
-;        ;Estimate initial fitting paramters
-;        fit_par_estim = [weighted_median(abs(fit_y-1),medval=.9),$;Amplitude
-;          36.5d0,$;Period
-;          0d0,$;Phase
-;          -0.0015d0] & $;Period slope
-;        fit_par_scatter = fit_par_estim/1d2 & $
-;        fit_par_scatter[1] = 5. & $
-;        fit_par_scatter[2] = !dpi/10. & $
-;        fit_par_scatter[3] = 1d-4 & $
-;        fit_par_noise = fit_par_estim#make_array(nfit,value=1d0,/double) + (fit_par_scatter#make_array(nfit,value=1d0,/double))*randomn(seed,n_elements(fit_par_estim),nfit) & $
-;        fit_par_noise[*,0] = fit_par_estim & $
-;        redchi2s = dblarr(nfit)+!values.d_nan & $
-;        fitpars = dblarr(n_elements(fit_par_estim),nfit)+!values.d_nan & $
-;        for fiti=0L, nfit-1L do begin & $
-;          fit_pari = mpfitfun('ishell_fringing_1d_model',fit_x,fit_y,1d0,fit_par_noise[*,fiti],YFIT=yfit,status=status,err=err,/nan,/quiet) & $
-;          redchi2s[fiti] = total((fit_y-yfit)^2,/nan)/double(total(finite(fit_y-yfit))) & $
-;          fitpars[*,fiti] = fit_pari & $
-;        endfor & $
-;        ;Idenfity min chi2 and keep it
-;        void = min(redchi2s,wmin) & $
-;        fit_par = fitpars[*,wmin] & $
-;        ;fit_par = mpfitfun('ishell_fringing_1d_model',fit_x,fit_y,1d0,fit_par_estim,YFIT=yfit,status=status,err=err,/nan,/quiet) & $
-;        wset, 0 & $
-;        wait,0.1 & $
-;        plot,fit_x,fit_y, xtitle=strtrim(rowi,2) & oplot, fit_x, ishell_fringing_1d_model(fit_x,fit_par), col=255 & $
-;        wait,0.1 & $
-;        model_pars[*,rowi] = fit_par & $
-;        models[*,rowi] = ishell_fringing_1d_model(dindgen(nx),fit_par) & $
-;      endfor
-;      gneg = where(reform(model_pars[0,*]) lt 0, ngneg)
-;      if ngneg ne 0L then model_pars[0,gneg] *= -1
-;      if ngneg ne 0L then model_pars[2,gneg] += !dpi/2d0
-;      model_pars[2,*] = ((model_pars[2,*]+2*!dpi) mod (!dpi*2d0))
-;      
-;      nsmooth_fringe_illum = 100L
-;      fringe_illum_function = smooth(median(max(fringing_solution_1d,dim=2,/nan),nsmooth_fringe_illum),nsmooth_fringe_illum)
-;      ;Normalize
-;      fringe_illum_function = (fringe_illum_function-1.)/max((fringe_illum_function-1.),/nan)
-;      fringe_illum_function[0:nsmooth_fringe_illum] = 0.
-;      fringe_illum_function[-nsmooth_fringe_illum:*] = 0.
-;      model_with_edges = (fringe_illum_function#make_array((size(fringing_solution_1d))[2],value=1d0,/double))*(models-1.)+1.
-;      
-;      ;Bring out detector patterns
-;      det_patterns = median(fringing_solution_1d/model_with_edges,dim=2)
-;      plot,det_patterns-1,yrange=[-.03,.04] & for i=0L, 32L do oplot, i*64+[0,0], [-10,10], col=255 & oplot,det_patterns-1
-;      
-;      det_patterns_2d = (det_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
-;      
-;      ;Smooth the fringing solution w/o detector patterns
-;      fringing_no_det_patterns = fringing_solution_1d/det_patterns_2d
-;      fringe_nsmooth = 3L
-;      for sri=0L, (size(fringing_solution_1d))[2]-1L do $
-;        fringing_no_det_patterns[*,sri] = median(fringing_no_det_patterns[*,sri],fringe_nsmooth)
-;      stop
-      
-      ;=====================================
-      ;END OF: NEW METHOD
-      ;=====================================
-      ;flatgas=mrdfits('/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/icm.2016B107.161107.flat.00132.a.fits',0)
-      ;flat=mrdfits('/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_night1/icm.2016B107.161016.flat.00042.a.fits',0)
-      ;flat_diff = double(flatgas)/double(flat)
-      ;bad = where(double(flatgas)/median(double(flatgas)) le 1. or double(flat)/median(double(flat)) le 0)
-      ;flat_diff[bad]=0.
-      ;flat_corrected = ishell_flat_fringing(flat_diff, orders_structure_cube[*,f], orders_mask_cube[*,*,f], CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=1L)
-      ;CTRL+C then i=0 then run lines 76-99
-      ;vf,straight_flat_order
-      ;plot,median(straight_flat_order,dim=2)/2.,yrange=[1.9,2.1]-1.
-      
       
       ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
       if remove_detector_patterns_from_data eq 1 then begin
@@ -1012,13 +932,15 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         if nbad ne 0L then $
           badpix_mask[bad] = 0.0
         
-        ;Recreate a 2D profile
-        message, ' Do not trust these best fit parameters for the trace shape, just use the model to flag bad pixels. This is what caused continuum to crap out sometimes', /continue
-        refined_again_coefficients = best_fit_parameters[0:ndegree_poly_fit-1L]
-        sigma_coefficients = best_fit_parameters[ndegree_poly_fit:*]
-        sigma = poly(xmap, sigma_coefficients)
-        gauss_y = poly(xmap, refined_again_coefficients)
-        profile_2d = exp(-(ymap-gauss_y)^2/(2d0*sigma^2))
+        ;Recreate a 2D profile with the 2D trace model that allows for a linear
+        ;  dependence on seeing vs spatial pixel position
+        if keyword_set(model_refinement_curvature) then begin
+          refined_again_coefficients = best_fit_parameters[0:ndegree_poly_fit-1L]
+          sigma_coefficients = best_fit_parameters[ndegree_poly_fit:*]
+          sigma = poly(xmap, sigma_coefficients)
+          gauss_y = poly(xmap, refined_again_coefficients)
+          profile_2d = exp(-(ymap-gauss_y)^2/(2d0*sigma^2))
+        endif
         
         ;Store the coefficients in the full-orders array of coefficients
         full_model_polynomials[*,i] = best_fit_parameters
@@ -1123,6 +1045,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
       sxaddpar, header, 'CODEVER', code_version, 'Version of data reduction code'
       sxaddpar, header, 'RMDTPTRN', remove_detector_patterns_from_data, 'Remove detector patterns with block median'
       sxaddpar, header, 'NOFLATS', override_flats, '/override_flats flag to skip flat field correction'
+      sxaddpar, header, 'REFCURVE', model_refinement_curvature, 'Use 2D model to refine trace curvature' 
       
       ;Write the data to a file
       openw, lun, output_file, /get_lun
