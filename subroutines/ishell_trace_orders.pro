@@ -1,10 +1,10 @@
-Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_structure, N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing
+Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_structure, $
+  N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing, ODD_ORDER_EDGES=odd_order_edges
   ;Takes a flat image as input and traces order positions
   ;IDEA (for future): instead of using a central median to trace the initial order positions, use a Z-shaped line to catch all orders at once
   ;Code version history
   ; Version 1.0: First stable version (J. Gagne), March 3, 2017
   ; Version 1.1: Added N_orders keyword for compatibility with K band, January 26, 2018
-  
   
   forward_function weighted_median,robust_sigma,horizontal_median,rvb_hex,remove,poly_fit
   
@@ -12,6 +12,9 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   ;Total number of orders - default is 29, which is appropriate for K band w/ the gas cell
   if ~keyword_set(n_orders) then $
     n_orders = 29L
+  
+  if ~keyword_set(odd_order_edges) then $
+    odd_order_edges = 0L
   
   ;Minimum pixel space between orders (default is 30 pixels for KS band)
   if ~keyword_set(min_order_spacing) then $
@@ -116,28 +119,36 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   
   ;Detect order edges in the center of the image first
   ;Loop on orders to select the most solid ones first
-  left_positions = lonarr(n_orders+1L)-1L
+  left_positions = lonarr(n_orders+odd_order_edges)-1L
   left_detection_image_center = -detection_image_center
   
-  ;Loop goes over 1 more order because there is an extra left edge
-  for i=0L, n_orders do begin
-    maxval = max(left_detection_image_center,/nan,wmax)
-    left_positions[i] = wmax
+  ;If number of left edges = right edges, loop goes over 1 extra order
+  for i=0L, n_orders-1L+odd_order_edges do begin & $
+    maxval = max(left_detection_image_center,/nan,wmax) & $
+    left_positions[i] = wmax & $
     ;Mask pixels around the detected max
     left_detection_image_center[(wmax-min_order_spacing)>0L:$
-      (wmax+min_order_spacing)<(ny-1L)] = !values.d_nan
+      (wmax+min_order_spacing)<(ny-1L)] = !values.d_nan & $
   endfor
   
   ;Sort the left positions
   left_positions = left_positions[sort(left_positions)]
   
+  ;If the number of order edges is not odd, add an artificial left edge at the end
+  if odd_order_edges eq 0 then $
+    left_positions = [left_positions,nx-1]
+  
   ;Find the right positions by taking the minimum value between each left position
   right_positions = lonarr(n_orders)-1L
   right_detection_image_center = detection_image_center
-  for i=0L, n_orders-1L do begin
-    maxval = max(detection_image_center[left_positions[i]:left_positions[i+1L]],/nan,wmax)
-    right_positions[i] = wmax+left_positions[i]
+  for i=0L, n_orders-1L do begin & $
+    maxval = max(detection_image_center[left_positions[i]:left_positions[i+1L]],/nan,wmax) & $
+    right_positions[i] = wmax+left_positions[i] & $
   endfor
+  
+  ;If the number of order edges is not odd, remove the artifical left edge at the end
+  if odd_order_edges eq 0 then $
+    remove, n_elements(left_positions)-1, left_positions
   
   ;Make some debugging plots
   if keyword_set(debug) then begin
@@ -149,7 +160,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   
   ;Drop edges in excess
   if n_elements(left_positions) gt n_elements(right_positions) then $
-    remove,n_orders,left_positions
+    remove,n_elements(left_positions)-1,left_positions
   if n_elements(right_positions) gt n_elements(left_positions) then $
     remove,0L,left_positions
   
