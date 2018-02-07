@@ -376,7 +376,10 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       endfor
       
       ;Median-combine the flat field and store it in cube
-      flats_uniq_cube[*,*,f] = median(flat_f_cube,dim=3)
+      ;If there is only one flat, do not median combine
+      if (size(flat_f_cube))[0] eq 2 then $
+        flats_uniq_cube[*,*,f] = flat_f_cube else $
+        flats_uniq_cube[*,*,f] = median(flat_f_cube,dim=3)
     endfor
     save, flats_uniq_cube, nx, ny, flat_ids_uniq, nflat_uniq, file=comb_flats_file, /compress
   endelse
