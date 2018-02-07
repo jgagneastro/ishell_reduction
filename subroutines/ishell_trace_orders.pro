@@ -131,7 +131,7 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   ;Sort the left positions
   left_positions = left_positions[sort(left_positions)]
   
-  ;Find the right positions by taking the minimum value between each right position
+  ;Find the right positions by taking the minimum value between each left position
   right_positions = lonarr(n_orders)-1L
   right_detection_image_center = detection_image_center
   for i=0L, n_orders-1L do begin
