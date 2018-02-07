@@ -32,12 +32,7 @@ Function correct_bad_pixels_posterior, flux, NSIG=nsig, NSHIFTS=nshifts
     
     ;Mask bad pixels
     if nbad ne 0L then fl[bad] = create_nan(size(fl,/type))
-;    stop
-;    g = where(finite(flux))
-;    xrange = [min(g),max(g)]+[-20,20]
-;    ;xrange = [600,800]
-;    xrange = [700,750]
-;    plot,flux,xrange=xrange,/ps,/xsty & oplot, fl, col=255,/ps
+    
   endfor
   return, fl
   

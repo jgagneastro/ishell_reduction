@@ -8,10 +8,6 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   
   forward_function weighted_median,robust_sigma,horizontal_median,rvb_hex,remove,poly_fit
   
-  ;TMP
-  ;flat_input = double(readfits('/Users/gagne/Downloads/master_flat.fits'))
-  ;/TMP
-  
   ;/// PARAMETERS ///
   ;Total number of orders - default is 29, which is appropriate for K band w/ the gas cell
   if ~keyword_set(n_orders) then $
