@@ -51,6 +51,10 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   if debug_trace_order eq !NULL then $
     debug_trace_orders = 0
   
+  ;Whether or not to avoid flat fields correction
+  if ~keyword_set(override_flats) then $
+    override_flats = 0
+  
   ;Whether or not darks should be subtracted
   if do_dark_subtraction eq !NULL then $
     do_dark_subtraction = 0
