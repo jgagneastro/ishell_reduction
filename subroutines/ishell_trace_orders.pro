@@ -150,6 +150,12 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
   if unequal_order_edges eq 0 then $
     remove, n_elements(left_positions)-1, left_positions
   
+  ;Drop edges in excess
+  if n_elements(left_positions) gt n_elements(right_positions) then $
+    remove,n_elements(left_positions)-1,left_positions
+  if n_elements(right_positions) gt n_elements(left_positions) then $
+    remove,0L,left_positions
+  
   ;Make some debugging plots
   if keyword_set(debug) then begin
     plot,lindgen(ny),detection_image_center
@@ -157,12 +163,6 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
     oplot,right_positions,interpol(detection_image_center,lindgen(ny),right_positions),col=rvb_hex(100,255,100),/ps
     stop
   endif
-  
-  ;Drop edges in excess
-  if n_elements(left_positions) gt n_elements(right_positions) then $
-    remove,n_elements(left_positions)-1,left_positions
-  if n_elements(right_positions) gt n_elements(left_positions) then $
-    remove,0L,left_positions
   
   ;Move along the edges horizontally to collect maximum positions and trace them
   negative_detection_image_smooth = -detection_image_smooth
