@@ -17,7 +17,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   ;Planned modifications:
   ; - Save detector patterns and fringing model if model_fringing = 1
   ; - >> Fix continuum problems with low SNR data
-  ; - Improve bad pixel rejection algorithm with low SNR data 
+  ; - >> Improve bad pixel rejection algorithm with low SNR data 
   
   ;Code version for headers
   code_version = 1.4
@@ -404,6 +404,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         'k2': begin
           n_orders = 32L
           min_order_spacing = 15
+        end
+        ;J2 band should have an order spacing of >= 16 pixels, using 12 to be conservative
+        'j2': begin
+          n_orders = 39L
+          min_order_spacing = 12
         end
         else: message, 'There are no options set for filter ID '+strtrim(current_filter,2)
       endcase
