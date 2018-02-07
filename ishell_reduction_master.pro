@@ -16,7 +16,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; Version 1.5: Added support for J2 band, .gz data, fixed problems with continuum in the optimal spectrum and improved bad pixel rejection. Feb. 6, 2018
   ; 
   ;Planned modifications:
-  ; - Use A star to derive Blaze function
+  ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
   
   ;Code version for headers
   code_version = 1.5
@@ -247,7 +247,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     format='A,A,F,A,A,A,A,A,A', /silent
   
   ;Remove trailing spaces
-  strtrim_multiple, filenames_log, object_names, data_comments, gascell_position, data_filters, data_slits, do_reduce
+  strtrim_multiple, filenames_log, object_names, data_comments, tcs_obj, gascell_position, data_filters, data_slits, do_reduce
   
   ;Make sure that the data files did not change
   if ~array_equal(filenames_log,file_basename(fits_data)) then begin
