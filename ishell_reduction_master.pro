@@ -381,7 +381,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   endelse
   
   ;Build all orders masks
-  max_n_orders = 32L;This should always be updated when adding stuff to the case statement below
+  max_n_orders = 39L;This should always be updated when adding stuff to the case statement below
   orders_mask_cube = dblarr(nx,ny,nflat_uniq)+!values.d_nan
   for f=0L, nflat_uniq-1L do begin
     ;Verify whether this was already done and saved to disk
@@ -412,6 +412,9 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         end
         else: message, 'There are no options set for filter ID '+strtrim(current_filter,2)
       endcase
+      
+      if n_orders gt max_n_orders then $
+        message, ' You must update the max_n_orders variable in the code'
       
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders)
