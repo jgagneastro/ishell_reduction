@@ -415,7 +415,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         end
         ;J2 band should have an order spacing of >= 16 pixels, using 12 to be conservative
         'j2': begin
-          n_orders = 39L
+          n_orders = 38L
           min_order_spacing = 12
           odd_order_edges = 0
         end
