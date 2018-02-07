@@ -432,7 +432,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       save, file=order_mask_file, orders_mask_f, orders_structure_f, n_orders, min_order_spacing, /compress
       
       ;Save order mask
-      writefits, order_mask_dir+'order_mask_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz', order_mask_f, /compress
+      writefits, order_mask_dir+'order_mask_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz', orders_mask_f, /compress
       
     endelse
     ;Store data in cubes
