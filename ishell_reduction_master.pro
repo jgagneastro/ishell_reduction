@@ -13,15 +13,13 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; Version 1.2: Added N_orders keyword for compatibility with K band, January 26, 2018
   ; Version 1.3: More fixes for mixed bands in a single night, added an option to remove column-dependent detector patterns from the data, January 31, 2018
   ; Version 1.4: Added option to model fringing to separate it from the column-dependent detector patterns. February 4, 2018
-  ;
+  ; Version 1.5: Added support for J2 band, .gz data, fixed problems with continuum in the optimal spectrum and improved bad pixel rejection. Feb. 6, 2018
+  ; 
   ;Planned modifications:
-  ; - Save detector patterns and fringing model if model_fringing = 1
-  ; - >> Fix continuum problems with low SNR data
-  ; - >> Improve bad pixel rejection algorithm with low SNR data
-  ; - Use A star to derive Blaze function 
+  ; - Use A star to derive Blaze function
   
   ;Code version for headers
-  code_version = 1.4
+  code_version = 1.5
   
   ;List of subroutines
   forward_function readfits,ishell_trace_orders,ishell_flat_fringing,interpol2,weighted_median,horizontal_median,$
@@ -460,7 +458,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
         CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=fringe_nsmooth, $
-        MODEL_FRINGING=model_fringing)
+        MODEL_FRINGING=model_fringing,DETECTOR_PATTERNS=detector_patterns,MODELS=models)
       
       ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
       if remove_detector_patterns_from_data eq 1 then begin
@@ -498,11 +496,35 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
         file_mkdir, flats_dir+'fringing_1d'+path_sep()
       for no=0L, (size(fringing_solution_1d))[2]-1L do $
-        printuarr, fringe_1d_file+'_ORDER'+strtrim(no+1,2L)+'.txt', fringing_solution_1d[*,no]
+        printuarr, fringe_1d_file+'_ORDER'+strtrim(no+1,2L)+'.txt', fringing_solution_1d[*,no], /new
       writefits, fringe_1d_fits_file, fringing_solution_1d, /compress
       writefits, flat_field_file, flat_corrected, /compress
       writefits, lumcorr_flat_field_file, lumcorr_flat, /compress
       writefits, fringe_flat_field_file, fringing_flat, /compress
+      
+      ;Output model fringing and detector patterns model_fringing = 1
+      if model_fringing eq 1 then begin
+        writefits, flats_dir+'fringe_model_2d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz', models, /compress
+        printuarr, flats_dir+'detector_patterns_'+date_id+'_ID_'+flat_ids_uniq[f]+'.txt', detector_patterns, /new
+        
+        ;Output 1D fringing models as text files
+        if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
+          file_mkdir, flats_dir+'fringing_1d'+path_sep()
+        fringe_models_file = flats_dir+'fringing_1d'+path_sep()+'model_fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]
+        for no=0L, (size(fringing_solution_1d))[2]-1L do $
+          printuarr, fringe_models_file+'_ORDER'+strtrim(no+1,2L)+'.txt', models[*,no], /new
+        
+        ;Make figure with detector patterns
+        plpat1 = plot(detector_patterns, xtitle='Pixel position',xticklen=.015,yticklen=.015,$
+          margin=[.14,.12,.03,.025],font_size=16,thick=2,xthick=2,ythick=2,$
+          xrange=[-1L,nx+1L],ytitle='Persistent flux bias',/buffer)
+        for no=0L, 32L do $
+          plpati = plot(/overplot,no*64+[0,0], [-10,10], color='red',linestyle='--',yrange=plpat1.yrange)
+        plpat1.order,/bring_to_front
+        plpat1.save, flats_dir+'preview_detector_patterns.png'
+        plpat1.close
+      endif
+      
     endelse
     
     ;If flat field correction is to be overrided

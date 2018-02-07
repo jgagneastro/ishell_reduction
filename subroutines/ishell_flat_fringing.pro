@@ -1,7 +1,7 @@
 Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORRECT_BLAZE_FUNCTION=correct_blaze_function, $
   LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing, $
   FRINGING_SOLUTION_1D=fringing_solution_1d, FRINGE_NSMOOTH=fringe_nsmooth, MODEL_FRINGING=model_fringing, $
-  DETECTOR_PATTENRS=detector_patterns
+  DETECTOR_PATTERNS=detector_patterns, MODELS=models
   ;This program (eventually function) takes an image of a raw or median-combined flat field "flat_image",
   ; and an "order_structure" correpsonding to the order that is needed. It will correct the fringing and return a
   ; fringing-corrected flat field that has a similar structure to the input "flat_image"
@@ -13,6 +13,10 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ; LUMCORR_FLAT_FILE: Returns a flat file where the spectral structure of the lamp and blaze function are corrected.
   ; FRINGING_FLAT: Returns a file containing the fringing pattern only
   ; FRINGING_SOLUTION_1D: Returns a 1D median fringing in each order
+  ; MODEL_FRINGING: Whether or not to model fringing with a period-dependent sine model to better remove it from flats
+  ; MODELS: Output 2D model of fringing (only if MODEL_FRINGING=1)
+  ; DETECTOR_PATTERNS: Output 1D array with detector patterns (only if MODEL_FRINGING=1)
+  ;  
   ;
   ; It would be possible to make this code faster by skipping rows with only NaNs in horizontal_median.pro and probably elsewhere too.
   
@@ -237,13 +241,12 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       1d-4];Period slope (pixel period / pixel = no units)
     
     ;Fit fringing in each order
-    message, ' Replace rowi with just i, or oi', /continue
-    for rowi=0L, n_orders-1L do begin
+    for oi=0L, n_orders-1L do begin
       
       ;Data to be fitted with the fringing model
-      print, '  Modeling fringing in flat field order #['+strtrim(rowi+1L,2)+'/'+strtrim(n_orders,2L)+'] ...'
+      print, '  Modeling fringing in flat field order #['+strtrim(oi+1L,2)+'/'+strtrim(n_orders,2L)+'] ...'
       
-      fit_y = fringing_solution_1d[min_fit_index:max_fit_index,rowi]
+      fit_y = fringing_solution_1d[min_fit_index:max_fit_index,oi]
       fit_x = dindgen(n_elements(fit_y))+min_fit_index
       
       ;Adjust estimated amplitude
@@ -273,11 +276,11 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       fit_par = fitpars[*,wmin]
       
       ;Optional: Display best fit
-      ;plot,fit_x,fit_y, xtitle=strtrim(rowi,2) & oplot, fit_x, ishell_fringing_1d_model(fit_x,fit_par), col=255
+      ;plot,fit_x,fit_y, xtitle=strtrim(oi,2) & oplot, fit_x, ishell_fringing_1d_model(fit_x,fit_par), col=255
       
       ;Store best fit parameters and model
-      model_pars[*,rowi] = fit_par
-      models[*,rowi] = ishell_fringing_1d_model(dindgen(nx),fit_par)
+      model_pars[*,oi] = fit_par
+      models[*,oi] = ishell_fringing_1d_model(dindgen(nx),fit_par)
     endfor
     
     ;Transform negative amplitudes to a pi phase shift
@@ -296,7 +299,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     fringe_blaze_function[-nsmooth_fringe_blaze:*] = 0.
     
     ;Create a model that includes the Blaze function
-    model_with_edges = (fringe_blaze_function#make_array((size(fringing_solution_1d))[2],value=1d0,/double))*(models-1.)+1.
+    model_with_edges = (fringe_blaze_function#make_array(n_orders,value=1d0,/double))*(models-1.)+1.
     
     ;Bring out detector patterns by dividing observed fringing by fringing model
     ; and then taking a vertical median to average out any fringing model residual
@@ -308,34 +311,16 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;plot,detector_patterns-1,yrange=[-.03,.04] & for i=0L, 32L do oplot, i*64+[0,0], [-10,10], col=255 & oplot,detector_patterns-1
     
     ;Create a 2D version of the detector patterns
-    ;Replace (size(fringing_solution_1d))[2]
-    detector_patterns_2d = (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+    detector_patterns_2d = (detector_patterns#make_array(n_orders,value=1d0,/double))
     
     ;Smooth the fringing solution w/o detector patterns to eliminate any pixel-to-pixel
     ; sensitivity variations which should remain in the flat field
     fringing_no_detector_patterns = fringing_solution_1d/detector_patterns_2d
-    ;replace (size(fringing_solution_1d))[2] with n_orders
-    for sri=0L, (size(fringing_solution_1d))[2]-1L do $
+    for sri=0L, n_orders-1L do $
       fringing_no_detector_patterns[*,sri] = median(fringing_no_detector_patterns[*,sri],fringe_nsmooth)
     
-;   ;Recreate the fringing flat image
-;   fringing_no_detector_patterns_2d = fringing_no_detector_patterns#make_array(ny,value=1d0,/double)
-;    g_within_order = where(orders_mask eq orders_structure[rowi].order_id, ng_within_order)
-;    if ng_within_order eq 0L then $
-;      message, 'No order positions were found !'
-;    fringing_flat[g_within_order] = fringing_no_detector_patterns_2d[g_within_order]
-;   
-;   ;Mask dark regions of the fringing_flat
-;   bad = where(~finite(final_flat[g_within_order]), nbad)
-;   if nbad ne 0L then $
-;     fringing_flat[g_within_order[bad]] = !values.d_nan
-   
-   ;fringing_solution_1d = fringing_no_detector_patterns
-   
-    message, ' Set fringing_solution_1d = fringing_no_detector_patterns. Remove line below fringing_solution_1d /= detector_patterns', /continue
-    
     ;Remove detector patterns from flat and fringing solutions
-    fringing_solution_1d /= (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+    fringing_solution_1d = fringing_no_detector_patterns
     detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
     fringing_flat /= detector_patterns_ny
     
