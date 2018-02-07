@@ -147,8 +147,11 @@ Function ishell_trace_orders, flat_input, DEBUG=debug, ORDERS_STRUCTURE=orders_s
     stop
   endif
   
-  ;Drop the last left edge
-  remove,n_orders,left_positions
+  ;Drop edges in excess
+  if n_elements(left_positions) gt n_elements(right_positions) then $
+    remove,n_orders,left_positions
+  if n_elements(right_positions) gt n_elements(left_positions) then $
+    remove,0L,left_positions
   
   ;Move along the edges horizontally to collect maximum positions and trace them
   negative_detection_image_smooth = -detection_image_smooth
