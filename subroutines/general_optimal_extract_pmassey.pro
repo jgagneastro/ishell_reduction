@@ -23,7 +23,7 @@ Function general_optimal_extract_PMassey, trace, sky, profile, readnoise, gain, 
     tracei = reform(trace[i,*])*gain
     
     ;Take a slice of the sky (in photon units)
-    skyi = sky[i,*]*gain
+    skyi = reform(sky[i,*])*gain
     
     if keyword_set(noskysubtraction) then $
       skyi *= 0d0
@@ -40,11 +40,18 @@ Function general_optimal_extract_PMassey, trace, sky, profile, readnoise, gain, 
       continue
     endif
     
+    ;Prepare masking negative data
+    wneg_data = where(datai lt 0., nneg_data)
+    
     ;Determine variance
     vari = readnoise^2+datai+skyi+err_sky^2
     
     ;Determine extraction weights based on the variance
     weightsi = profilei^2/vari
+    
+    ;Mask negative data
+    if nneg_data ne 0L then $
+      weightsi[wneg_data] = 0.
     
     bad = where(~finite(datai*weightsi),nbad)
     if nbad ne 0L then begin

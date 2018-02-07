@@ -16,7 +16,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   ;
   ;Planned modifications:
   ; - Save detector patterns and fringing model if model_fringing = 1
-  ; - Fix continuum problems with low SNR data
+  ; - >> Fix continuum problems with low SNR data
   ; - Improve bad pixel rejection algorithm with low SNR data 
   
   ;Code version for headers
@@ -840,7 +840,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   
       ;Filter out bad pixels
       raw_sp_bpix = correct_bad_pixels_posterior(raw_sp)
-  
+      
       ;Replace NaNs in the raw extraction with a median smooth
       for rep=0L, 1L do begin
         bad = where(~finite(raw_sp_bpix), nbad)
@@ -951,6 +951,9 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         
         ;Re-do the optimal extraction with the refined parameters
         opt_spectrum = general_optimal_extract_pmassey(im_order, sky_2d, profile_2d*badpix_mask, eff_read_noise, gain, ESP=err_opt_spectrum)
+        
+        ;Apply a final bad pixel masking step
+        opt_spectrum = correct_bad_pixels_posterior(opt_spectrum)
         
         ;Refine the 2D model even more for output. This can be useful for debugging.
         opt_spectrum_2d = opt_spectrum#make_array(ny,value=1d0,/double)
