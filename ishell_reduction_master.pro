@@ -398,26 +398,27 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       
       ;Determine the number of orders and the minimum order spacing expected for each filter
       current_filter = (strsplit(flat_ids_uniq[f],'|',/extract))[1]
-      ;"odd_order_edges" must be set to 1 if there is 1 more left edges than right edges
-      ;  in the order detection plot (use debug_trace_orders to view that plot)
+      ;"unequal_order_edges" must be set to 1 if there is 1 more left edges than right edges
+      ;  in the order detection plot (use debug_trace_orders to view that plot) *and* you 
+      ;  want to extract even the last order to the right
       case strlowcase(current_filter) of
         ;KS-band data has 29 orders and 15 pixels minimum between each order
         'kgas': begin
           n_orders = 29L
           min_order_spacing = 15
-          odd_order_edges = 1
+          unequal_order_edges = 1
         end
         ;K2-band data has 32 orders and 15 pixels minimum between each order
         'k2': begin
           n_orders = 32L
           min_order_spacing = 15
-          odd_order_edges = 1
+          unequal_order_edges = 1
         end
         ;J2 band should have an order spacing of >= 16 pixels, using 12 to be conservative
         'j2': begin
           n_orders = 38L
           min_order_spacing = 12
-          odd_order_edges = 0
+          unequal_order_edges = 1
         end
         else: message, 'There are no options set for filter ID '+strtrim(current_filter,2)
       endcase
@@ -427,7 +428,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, $
-        MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders,odd_order_edges=odd_order_edges)
+        MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders,unequal_order_edges=unequal_order_edges)
       save, file=order_mask_file, orders_mask_f, orders_structure_f, n_orders, min_order_spacing, /compress
       
       ;Save order mask
