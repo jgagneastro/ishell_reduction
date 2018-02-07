@@ -190,7 +190,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   endif
   
   ;Identify all fits data files (they must not be in subdirectories)
-  fits_data = file_search(data_path+'*.fits')
+  fits_data = file_search(data_path+'*.fits*')
   ndata = n_elements(fits_data)
   
   ;Read file header information
@@ -538,7 +538,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     
     ;If all orders of this exposure are already present, skip this exposure altogether
     object_name = object_names[g_science[sci]]
-    output_files = spectra_dir+file_basename(data_file,'.fits')+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure.order_id,2)+'_spectrum.txt'
+    output_files = spectra_dir+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure.order_id,2)+'_spectrum.txt'
     if min(file_test(output_files)) eq 1 then begin
       print, '   Skipping extraction because it already exists...'
       continue
@@ -1023,7 +1023,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         yrange = [yrange[0L],yrange[1L]<1.2]
         a.yrange = yrange
         ;Save the figure
-        a.save, previews_dir+file_basename(data_file,'.fits')+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure[i].order_id,2)+'_preview.png'
+        a.save, previews_dir+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure[i].order_id,2)+'_preview.png'
         ;Close the figure
         a.close
       endif
@@ -1147,7 +1147,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       endfor
     endif
     
-    full_orders_spectra_file = previews_dir+'full_orders_spectra_preview_'+file_basename(data_file,'.fits')+'_OBJ_'+object_name+'.png'
+    full_orders_spectra_file = previews_dir+'full_orders_spectra_preview_'+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'.png'
     window_id.save, full_orders_spectra_file
     pai.close
     
