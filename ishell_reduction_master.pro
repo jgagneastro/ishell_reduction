@@ -316,7 +316,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         darks_uniq_cube[*,*,f] = median(darks_f_cube,dim=3)
         
         ;Save the dark as a fits file
-        writefits, darks_dir+'dark_medcomb_'+date_id+'_TEXP'+darks_IDs_uniq[f]+'s.fits', darks_uniq_cube[*,*,f]
+        writefits, darks_dir+'dark_medcomb_'+date_id+'_TEXP'+darks_IDs_uniq[f]+'s.fits.gz', darks_uniq_cube[*,*,f], /compress
       endfor
       save, darks_uniq_cube, nx, ny, file=comb_darks_file, /compress
     endelse
@@ -439,11 +439,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ;Correct flat fields for fringing
   flats_uniq_cube_corrected = flats_uniq_cube+!values.d_nan
   for f=0L, nflat_uniq-1L do begin
-    flat_field_file = flats_dir+'corr_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
-    lumcorr_flat_field_file = flats_dir+'lumcorr_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
-    fringe_flat_field_file = flats_dir+'fringe_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
+    flat_field_file = flats_dir+'corr_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz'
+    lumcorr_flat_field_file = flats_dir+'lumcorr_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz'
+    fringe_flat_field_file = flats_dir+'fringe_flat_field_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz'
     fringe_1d_file = flats_dir+'fringing_1d'+path_sep()+'fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]
-    fringe_1d_fits_file = flats_dir+'fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits'
+    fringe_1d_fits_file = flats_dir+'fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz'
     if file_test(flat_field_file) then begin
       flat_corrected = readfits(flat_field_file,/silent)
     endif else begin
@@ -490,10 +490,10 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         file_mkdir, flats_dir+'fringing_1d'+path_sep()
       for no=0L, (size(fringing_solution_1d))[2]-1L do $
         printuarr, fringe_1d_file+'_ORDER'+strtrim(no+1,2L)+'.txt', fringing_solution_1d[*,no]
-      writefits, fringe_1d_fits_file, fringing_solution_1d
-      writefits, flat_field_file, flat_corrected
-      writefits, lumcorr_flat_field_file, lumcorr_flat
-      writefits, fringe_flat_field_file, fringing_flat
+      writefits, fringe_1d_fits_file, fringing_solution_1d, /compress
+      writefits, flat_field_file, flat_corrected, /compress
+      writefits, lumcorr_flat_field_file, lumcorr_flat, /compress
+      writefits, fringe_flat_field_file, fringing_flat, /compress
     endelse
     
     ;If flat field correction is to be overrided
@@ -1081,8 +1081,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     ;Once the loop over orders is finished, save the full 2D models file and the data - model residuals as well (if needed)
     if keyword_set(do_trace_2d_fit) then begin
       if generate_2d_model_fits_images then begin
-        full_model_file = models_dir+'full_model_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.fits'
-        writefits, full_model_file, full_2d_model, /silent
+        full_model_file = models_dir+'full_model_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.fits.gz'
+        writefits, full_model_file, full_2d_model, /silent, /compress
         full_model_polynomials_file = models_dir+'full_polynomials_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.txt'
         openw, lun2, full_model_polynomials_file, /get_lun
         printf, lun2, '; '+strtrim(ndegree_poly_fit,2)+' coefficients for Y trace pos + '+strtrim(ndegree_sigma_fit,2)+' coefficients for seeing versus wavelength (columns)'
@@ -1094,8 +1094,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         free_lun, lun2
       endif
       if generate_residuals_fits_images then begin
-        full_residuals_file = residuals_dir+'full_residuals'+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.fits'
-        writefits, full_residuals_file, data_im-full_2d_model, /silent
+        full_residuals_file = residuals_dir+'full_residuals'+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.fits.gz'
+        writefits, full_residuals_file, data_im-full_2d_model, /silent, /compress
       endif
     endif
     
