@@ -2,7 +2,7 @@
 ;"simple block filter" ishell_reduction_master,model_fringing=0,remove_detector_patterns_from_data=1
 ;"noflats": ishell_reduction_master,/override_flats,model_fringing=0,correct_fringing_in_flatfield=0
 ;"nofringing_corr_": ishell_reduction_master,model_fringing=0,correct_fringing_in_flatfield=0
-Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug_trace_order, DO_DARK_SUBTRACTION=do_dark_subtraction, $
+Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debug_trace_orders, DO_DARK_SUBTRACTION=do_dark_subtraction, $
   CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
   REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats, $
   MODEL_REFINEMENT_CURVATURE=model_refinement_curvature
@@ -17,7 +17,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
   ;Planned modifications:
   ; - Save detector patterns and fringing model if model_fringing = 1
   ; - >> Fix continuum problems with low SNR data
-  ; - >> Improve bad pixel rejection algorithm with low SNR data 
+  ; - >> Improve bad pixel rejection algorithm with low SNR data
+  ; - Use A star to derive Blaze function 
   
   ;Code version for headers
   code_version = 1.4
@@ -48,7 +49,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
     output_dir_root += path_sep()
   
   ;Whether or not to do debugging for trace order detection
-  if debug_trace_order eq !NULL then $
+  if debug_trace_orders eq !NULL then $
     debug_trace_orders = 0
   
   ;Whether or not to avoid flat fields correction
@@ -417,7 +418,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDER=debug
         message, ' You must update the max_n_orders variable in the code'
       
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders)
+      orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, $
+        MIN_ORDER_SPACING=min_order_spacing,debug=debug_trace_orders)
       save, file=order_mask_file, orders_mask_f, orders_structure_f, n_orders, min_order_spacing, /compress
     endelse
     ;Store data in cubes
