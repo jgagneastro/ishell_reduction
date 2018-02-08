@@ -140,6 +140,9 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;Apply additional smoothing to remove any fringing residuals
     spectral_profile = smooth_error(median(spectral_profile,nhsmooth),nhsmooth)
     
+    ;Recreate flat_hsmooth from the spectral profile
+    flat_hsmooth = (spectral_profile#make_array(height,value=1d0,/double))
+    
     flat_illumination[*,i] = spectral_profile
     
     ;Create an image where fringing is more obvious
