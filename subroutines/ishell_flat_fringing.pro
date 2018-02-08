@@ -2,7 +2,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing, $
   FRINGING_SOLUTION_1D=fringing_solution_1d, FRINGE_NSMOOTH=fringe_nsmooth, MODEL_FRINGING=model_fringing, $
   DETECTOR_PATTERNS=detector_patterns, MODELS=models
-  ;This program (eventually function) takes an image of a raw or median-combined flat field "flat_image",
+  ;This function takes an image of a raw or median-combined flat field "flat_image",
   ; and an "order_structure" correpsonding to the order that is needed. It will correct the fringing and return a
   ; fringing-corrected flat field that has a similar structure to the input "flat_image"
   ; order_structure should be a single structure with the following keywords: 
@@ -26,7 +26,6 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     message, ' You must input a flat image, an orders structure and an orders mask'
   
   ;Number of top/bottom pixels to cut from the fringe fitting region
-  ; This is mostly temporary
   npix_cutoff_top = 3L
   npix_cutoff_bottom = 5L
   

@@ -16,16 +16,18 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; Version 1.5: Added support for J2 band, .gz data, fixed problems with continuum in the optimal spectrum and improved bad pixel rejection. Feb. 6, 2018
   ; 
   ;Planned modifications:
+  ; - Check flat field illumination stability through orders, exposures and nights
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
+  
   
   ;Code version for headers
   code_version = 1.5
   
   ;List of subroutines
-  forward_function readfits,ishell_trace_orders,ishell_flat_fringing,interpol2,weighted_median,horizontal_median,$
-    vertical_median,sxpar,whiten_color, sxpar_mul, rtrim, readcol, printuarr, match_unsorted, $
-    strtrim_multiple, nan_str, mpfit2dfun, fit_2d_curved_trace, general_optimal_extract_pmassey, $
-    correct_bad_pixels_posterior, sxaddpar, strkill
+  forward_function readfits, ishell_trace_orders, ishell_flat_fringing, interpol2, weighted_median, $
+    horizontal_median, vertical_median, sxpar, whiten_color, sxpar_mul, rtrim, readcol, printuarr, $
+    match_unsorted, strtrim_multiple, nan_str, mpfit2dfun, fit_2d_curved_trace, $
+    general_optimal_extract_pmassey, correct_bad_pixels_posterior, sxaddpar, strkill
   
   ;/// Adjustable parameters ///
   
@@ -715,8 +717,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       
       ;Mask the edges of the trace
       if keyword_set(mask_trace_edges) then begin
-        trace_profile[0L:mask_trace_edges-1L] = 0d0
-        trace_profile[-mask_trace_edges:*] = 0d0
+        trace_profile[0L:mask_trace_edges-1L] = !values.d_nan
+        trace_profile[-mask_trace_edges:*] = !values.d_nan
       endif
       
       ;Re-scale the trace profile
