@@ -17,7 +17,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
-  ; - With model fringing = 1, flats need to be recreated at the end of the modelling after smoothing the fringing
   
   ;Code version for headers
   code_version = 1.5
