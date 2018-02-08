@@ -14,12 +14,13 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; Version 1.3: More fixes for mixed bands in a single night, added an option to remove column-dependent detector patterns from the data, January 31, 2018
   ; Version 1.4: Added option to model fringing to separate it from the column-dependent detector patterns. February 4, 2018
   ; Version 1.5: Added support for J2 band, .gz data, fixed problems with continuum in the optimal spectrum and improved bad pixel rejection. Feb. 6, 2018
+  ; Version 1.6: Fixed a problem with fringing residuals left in flat fields. Feb 8, 2018
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
   
   ;Code version for headers
-  code_version = 1.5
+  code_version = 1.6
   
   ;List of subroutines
   forward_function readfits, ishell_trace_orders, ishell_flat_fringing, interpol2, weighted_median, $
