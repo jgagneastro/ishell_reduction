@@ -138,7 +138,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     spectral_profile = median(flat_hsmooth,dim=2)
     
     ;Apply additional smoothing to remove any fringing residuals
-    ;spectral_profile = smooth_error(median(spectral_profile,nhsmooth),nhsmooth)
+    spectral_profile = smooth_error(median(spectral_profile,nhsmooth),nhsmooth)
     
     ;Recreate flat_hsmooth from the spectral profile
     flat_hsmooth = (spectral_profile#make_array(height,value=1d0,/double))
@@ -293,34 +293,17 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       models[*,oi] = ishell_fringing_1d_model(dindgen(nx),fit_par)
     endfor
     
-    vf,fringing_solution_1d/models
-    stop
-    
     ;Transform negative amplitudes to a pi phase shift
     gneg = where(reform(model_pars[0,*]) lt 0, ngneg)
     if ngneg ne 0L then model_pars[0,gneg] *= -1
     if ngneg ne 0L then model_pars[2,gneg] += !dpi
     model_pars[2,*] = ((model_pars[2,*]+2*!dpi) mod (!dpi*2d0))
     
-    ;Take an extremely horizontally smoothed version of the observed fringing to bring out Blaze function of this order   
-    nsmooth_fringe_blaze = 100L
-    fringe_blaze_function = smooth(median(max(fringing_solution_1d,dim=2,/nan),nsmooth_fringe_blaze),nsmooth_fringe_blaze)
-    
-    ;Normalize the Blaze function appropriately and mask the edges
-    fringe_blaze_function[0:nsmooth_fringe_blaze] = !values.d_nan
-    fringe_blaze_function[-nsmooth_fringe_blaze:*] = !values.d_nan
-    fringe_blaze_function = (fringe_blaze_function-1.)/max((masked_fringe_blaze_function-1.),/nan)
-    fringe_blaze_function[0:nsmooth_fringe_blaze] = 0.
-    fringe_blaze_function[-nsmooth_fringe_blaze:*] = 0.
-    
-    ;Create a model that includes the Blaze function
-    model_with_edges = (fringe_blaze_function#make_array(n_orders,value=1d0,/double))*(models-1.)+1.
-    
     ;Bring out detector patterns by dividing observed fringing by fringing model
     ; and then taking a vertical median to average out any fringing model residual
     ; We are seeking column-dependent detector patterns so those will survive a vertical median
     ; (observed fringing contains not only true fringing but also detector patterns) 
-    detector_patterns = median(fringing_solution_1d/model_with_edges,dim=2)
+    detector_patterns = median(fringing_solution_1d/models,dim=2)
     
     ;Optional: Figure displaying detector patterns and detector "breaks" at 64-pixels steps
     ;plot,detector_patterns-1,yrange=[-.03,.04] & for i=0L, 32L do oplot, i*64+[0,0], [-10,10], col=255 & oplot,detector_patterns-1
@@ -343,14 +326,21 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       fringing_flat[g_within_order] = fringing_no_detector_patterns_2d[g_within_order] & $
     endfor
     
-    ;Remove detector patterns from flat and fringing solutions
-    fringing_solution_1d = fringing_no_detector_patterns
-    detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
-    fringing_flat /= detector_patterns_ny
     
-    ;Put back the detector patterns in flat fields
-    final_flat *= detector_patterns_ny
-    lumcorr_flat *= detector_patterns_ny
+    ;Recreate 2D image of illumination
+    illumination_image = dblarr(ny,ny)+!values.d_nan
+    for sri=0L, n_orders-1L do begin & $
+      illumination_2d = (flat_illumination[*,sri]#make_array(ny,value=1d0,/double)) & $
+      g_within_order = where(orders_mask eq orders_structure[sri].order_id, ng_within_order) & $
+      if ng_within_order eq 0L then $
+        message, 'No order positions were found !' & $
+      illumination_image[g_within_order] = illumination_2d[g_within_order] & $
+    endfor
+    
+    ;Recreate final corrected flat and other relevant quantities
+    final_flat = flat_image/fringing_flat
+    lumcorr_flat = flat_image/(illumination_image*fringing_flat)
+    fringing_solution_1d = fringing_no_detector_patterns
     
   endif
   
