@@ -1,7 +1,7 @@
 Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORRECT_BLAZE_FUNCTION=correct_blaze_function, $
   LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, CORRECT_FRINGING=correct_fringing, $
   FRINGING_SOLUTION_1D=fringing_solution_1d, FRINGE_NSMOOTH=fringe_nsmooth, MODEL_FRINGING=model_fringing, $
-  DETECTOR_PATTERNS=detector_patterns, MODELS=models
+  DETECTOR_PATTERNS=detector_patterns, MODELS=models, FLAT_ILLUMINATION=flat_illumination
   ;This function takes an image of a raw or median-combined flat field "flat_image",
   ; and an "order_structure" correpsonding to the order that is needed. It will correct the fringing and return a
   ; fringing-corrected flat field that has a similar structure to the input "flat_image"
@@ -16,6 +16,8 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ; MODEL_FRINGING: Whether or not to model fringing with a period-dependent sine model to better remove it from flats
   ; MODELS: Output 2D model of fringing (only if MODEL_FRINGING=1)
   ; DETECTOR_PATTERNS: Output 1D array with detector patterns (only if MODEL_FRINGING=1)
+  ; FLAT_ILLUMINATION: Spatial illumination of the flats measured with a very wide median filter.
+  ;   This includes the spectrum of the lamp and the Blaze function of each order.
   ;  
   ;
   ; It would be possible to make this code faster by skipping rows with only NaNs in horizontal_median.pro and probably elsewhere too.
@@ -70,6 +72,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
   ;Find out the number of orders for that particular object
   good_orders = where(orders_structure.order_id ge 0, n_orders)
   fringing_solution_1d = dblarr(nx,n_orders)+!values.d_nan
+  flat_illumination = dblarr(nx,n_orders)+!values.d_nan
   
   ;Loop on orders
   for i=0L, n_orders-1L do begin
@@ -133,6 +136,11 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     
     ;Recreate a better spectral profile, if needed
     spectral_profile = median(flat_hsmooth,dim=2)
+    
+    ;Apply additional smoothing to remove any fringing residuals
+    spectral_profile = smooth_error(median(spectral_profile,nhsmooth),nhsmooth)
+    
+    flat_illumination[*,i] = spectral_profile
     
     ;Create an image where fringing is more obvious
     fringing_image = straight_flat_order/flat_hsmooth

@@ -16,8 +16,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; Version 1.5: Added support for J2 band, .gz data, fixed problems with continuum in the optimal spectrum and improved bad pixel rejection. Feb. 6, 2018
   ; 
   ;Planned modifications:
-  ; - Check flat field illumination stability through orders, exposures and nights
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
+  ; - Change the filters case statement for 3 arrays. This will remove the need to set max_n_orders
   
   
   ;Code version for headers
@@ -36,7 +36,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_night1/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
-    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
+    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
+    ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_No_Gas/'
   
   ;The path where the data reduction products will be stored
   if ~keyword_set(output_dir_root) then $
@@ -460,7 +461,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
         CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
         CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=fringe_nsmooth, $
-        MODEL_FRINGING=model_fringing,DETECTOR_PATTERNS=detector_patterns,MODELS=models)
+        MODEL_FRINGING=model_fringing,DETECTOR_PATTERNS=detector_patterns,MODELS=models, FLAT_ILLUMINATION=flat_illumination)
       
       ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
       if remove_detector_patterns_from_data eq 1 then begin
@@ -504,6 +505,9 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       writefits, lumcorr_flat_field_file, lumcorr_flat, /compress
       writefits, fringe_flat_field_file, fringing_flat, /compress
       
+      ;Output illumination function
+      save, flat_illumination, file=flats_dir+'flat_illumination_'+date_id+'_ID_'+flat_ids_uniq[f]+'.sav', /compress
+      
       ;Output model fringing and detector patterns model_fringing = 1
       if model_fringing eq 1 then begin
         writefits, flats_dir+'fringe_model_2d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz', models, /compress
@@ -516,7 +520,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         for no=0L, (size(fringing_solution_1d))[2]-1L do $
           printuarr, fringe_models_file+'_ORDER'+strtrim(no+1,2L)+'.txt', models[*,no], /new
         
-        ;Make figure with detector patterns
+        ;Make a figure with detector patterns
         plpat1 = plot(detector_patterns, xtitle='Pixel position',xticklen=.015,yticklen=.015,$
           margin=[.14,.12,.03,.025],font_size=16,thick=2,xthick=2,ythick=2,$
           xrange=[-1L,nx+1L],ytitle='Persistent flux bias',/buffer)
