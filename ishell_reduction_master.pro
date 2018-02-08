@@ -17,7 +17,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
-  ; - Change the filters case statement for 3 arrays. This will remove the need to set max_n_orders
   
   
   ;Code version for headers
@@ -167,6 +166,18 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ;Median measured dark current in electrons per second
   ;http://irtfweb.ifa.hawaii.edu/~ishell/iSHELL_observing_manual.pdf
   dark_current = 0.05
+  
+  ;List of available filters with their relevant settings
+  filters_names =               ['KGAS', 'K2', 'J2']
+  filters_n_orders =            [29L,     32L, 38L]
+  filters_min_order_spacing =   [15L,     15L, 12L]
+  filters_unequal_order_edges = [1,       1,   1]
+  ;min_order_spacing is the minimal possible space in pixels between any two orders
+  ;"unequal_order_edges" must be set to 1 if there is 1 more left edges than right edges
+  ;  in the order detection plot (use debug_trace_orders to view that plot) *and* you
+  ;  want to extract even the last order to the right
+  
+  max_n_orders = max(filters_n_orders,/nan)
   
   ;/// End of: adjustable parameters ///
   
@@ -386,7 +397,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   endelse
   
   ;Build all orders masks
-  max_n_orders = 39L;This should always be updated when adding stuff to the case statement below
   orders_mask_cube = dblarr(nx,ny,nflat_uniq)+!values.d_nan
   for f=0L, nflat_uniq-1L do begin
     ;Verify whether this was already done and saved to disk
@@ -397,35 +407,15 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       restore, order_mask_file;, orders_mask_f, orders_structure_f, n_orders, min_order_spacing
     endif else begin
       
-      ;Determine the number of orders and the minimum order spacing expected for each filter
+      ;Determine the relevant set-up for the current filter
       current_filter = (strsplit(flat_ids_uniq[f],'|',/extract))[1]
-      ;"unequal_order_edges" must be set to 1 if there is 1 more left edges than right edges
-      ;  in the order detection plot (use debug_trace_orders to view that plot) *and* you 
-      ;  want to extract even the last order to the right
-      case strlowcase(current_filter) of
-        ;KS-band data has 29 orders and 15 pixels minimum between each order
-        'kgas': begin
-          n_orders = 29L
-          min_order_spacing = 15
-          unequal_order_edges = 1
-        end
-        ;K2-band data has 32 orders and 15 pixels minimum between each order
-        'k2': begin
-          n_orders = 32L
-          min_order_spacing = 15
-          unequal_order_edges = 1
-        end
-        ;J2 band should have an order spacing of >= 16 pixels, using 12 to be conservative
-        'j2': begin
-          n_orders = 38L
-          min_order_spacing = 12
-          unequal_order_edges = 1
-        end
-        else: message, 'There are no options set for filter ID '+strtrim(current_filter,2)
-      endcase
+      g_filter = (where(strlowcase(filters_names) eq strlowcase(current_filter), ng_filter))[0]
+      if ng_filter ne 1 then $
+        message, ' Could not find 1 unique match to filter "'+current_filter+'" in the list of known filters (variable filters_names) !'
       
-      if n_orders gt max_n_orders then $
-        message, ' You must update the max_n_orders variable in the code'
+      n_orders = filters_n_orders[g_filter]
+      min_order_spacing = filters_min_order_spacing[g_filter]
+      unequal_order_edges = filters_unequal_order_edges[g_filter]
       
       print, 'Building orders mask for flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
       orders_mask_f = ishell_trace_orders(flats_uniq_cube[*,*,f],orders_structure=orders_structure_f,N_ORDERS=n_orders, $
