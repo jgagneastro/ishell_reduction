@@ -138,7 +138,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     spectral_profile = median(flat_hsmooth,dim=2)
     
     ;Apply additional smoothing to remove any fringing residuals
-    spectral_profile = smooth_error(median(spectral_profile,nhsmooth),nhsmooth)
+    ;spectral_profile = smooth_error(median(spectral_profile,nhsmooth),nhsmooth)
     
     ;Recreate flat_hsmooth from the spectral profile
     flat_hsmooth = (spectral_profile#make_array(height,value=1d0,/double))
@@ -293,6 +293,9 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       models[*,oi] = ishell_fringing_1d_model(dindgen(nx),fit_par)
     endfor
     
+    vf,fringing_solution_1d/models
+    stop
+    
     ;Transform negative amplitudes to a pi phase shift
     gneg = where(reform(model_pars[0,*]) lt 0, ngneg)
     if ngneg ne 0L then model_pars[0,gneg] *= -1
@@ -304,7 +307,9 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     fringe_blaze_function = smooth(median(max(fringing_solution_1d,dim=2,/nan),nsmooth_fringe_blaze),nsmooth_fringe_blaze)
     
     ;Normalize the Blaze function appropriately and mask the edges
-    fringe_blaze_function = (fringe_blaze_function-1.)/max((fringe_blaze_function-1.),/nan)
+    fringe_blaze_function[0:nsmooth_fringe_blaze] = !values.d_nan
+    fringe_blaze_function[-nsmooth_fringe_blaze:*] = !values.d_nan
+    fringe_blaze_function = (fringe_blaze_function-1.)/max((masked_fringe_blaze_function-1.),/nan)
     fringe_blaze_function[0:nsmooth_fringe_blaze] = 0.
     fringe_blaze_function[-nsmooth_fringe_blaze:*] = 0.
     
@@ -330,8 +335,8 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
       fringing_no_detector_patterns[*,sri] = median(fringing_no_detector_patterns[*,sri],fringe_nsmooth)
     
     ;Recreate 2D image of fringing in flat
-    fringing_no_detector_patterns_2d = (fringing_no_detector_patterns[*,sri]#make_array(ny,value=1d0,/double))
     for sri=0L, n_orders-1L do begin & $
+      fringing_no_detector_patterns_2d = (fringing_no_detector_patterns[*,sri]#make_array(ny,value=1d0,/double)) & $
       g_within_order = where(orders_mask eq orders_structure[sri].order_id, ng_within_order) & $
       if ng_within_order eq 0L then $
         message, 'No order positions were found !' & $
