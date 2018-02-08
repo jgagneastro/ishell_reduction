@@ -722,7 +722,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       endif
       
       ;Re-scale the trace profile
-      trace_profile -= weighted_median(trace_profile,medval=.05)
+      trace_profile -= weighted_median(trace_profile,medval=.1)
       trace_profile >= 0d0
       trace_profile /= max(trace_profile,/nan)
       
