@@ -326,6 +326,15 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     for sri=0L, n_orders-1L do $
       fringing_no_detector_patterns[*,sri] = median(fringing_no_detector_patterns[*,sri],fringe_nsmooth)
     
+    ;Recreate 2D image of fringing in flat
+    fringing_no_detector_patterns_2d = (fringing_no_detector_patterns[*,sri]#make_array(ny,value=1d0,/double))
+    for sri=0L, n_orders-1L do begin & $
+      g_within_order = where(orders_mask eq orders_structure[sri].order_id, ng_within_order) & $
+      if ng_within_order eq 0L then $
+        message, 'No order positions were found !' & $
+      fringing_flat[g_within_order] = fringing_no_detector_patterns_2d[g_within_order] & $
+    endfor
+    
     ;Remove detector patterns from flat and fringing solutions
     fringing_solution_1d = fringing_no_detector_patterns
     detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
