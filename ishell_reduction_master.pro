@@ -186,6 +186,9 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   date_id = file_basename(data_path)
   output_dir = output_dir_root+date_id+path_sep()
   
+  ;Define directory for trace profiles
+  trace_profiles_dir = output_dir+'trace_profiles'+path_sep()
+  
   ;Recursively create output directory if it does not exist
   if ~file_test(output_dir) then begin
     dirs = strsplit(output_dir,path_sep(),/extract)
@@ -748,7 +751,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       trace_max_pos = gauss_parameters[1L]
       
       ;Create and save a figure of the trace profile compared to a Gaussian fit (this is useful for debugging)
-      trace_profiles_dir = output_dir+'trace_profiles'+path_sep()
       if ~file_test(trace_profiles_dir) then file_mkdir, trace_profiles_dir
       trace_profiles_file = trace_profiles_dir+'trace_profile_order'+strtrim(orders_structure[i].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.png'
       ytrace_precise = dindgen(1d3)/double(1d3-1)*double(height)
@@ -1131,7 +1133,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     endif
     
     ;Create the full-orders trace profile figure
-      if generate_full_orders_trace_profile_figures then begin
+    if generate_full_orders_trace_profile_figures then begin
       pa = !NULL
       yshift = 0d0
       ydel = 0.3d0
