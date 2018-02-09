@@ -18,6 +18,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
+  ; - Try optimally extracting the non-lumcorr flat field and see if the resulting Blaze function works better.
   
   ;Code version for headers
   code_version = 1.6
@@ -447,80 +448,83 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     if file_test(flat_field_file) then begin
       flat_corrected = readfits(flat_field_file,/silent)
     endif else begin
-      print, ' Correcting flat field for fringing, flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
-      flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
-        CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
-        CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=fringe_nsmooth, $
-        MODEL_FRINGING=model_fringing,DETECTOR_PATTERNS=detector_patterns,MODELS=models, FLAT_ILLUMINATION=flat_illumination)
+      if keyword_set(override_flats) then begin
+        flat_corrected = flats_uniq_cube[*,*,f]
+      endif else begin
+        print, ' Correcting flat field for fringing, flat ID ['+strtrim(f+1L,2L)+'/'+strtrim(nflat_uniq,2L)+']: '+flat_ids_uniq[f]+'...'
+        flat_corrected = ishell_flat_fringing(flats_uniq_cube[*,*,f], orders_structure_cube[*,f], orders_mask_cube[*,*,f], $
+          CORRECT_BLAZE_FUNCTION=correct_blaze_function_in_flatfield, LUMCORR_FLAT=lumcorr_flat, FRINGING_FLAT=fringing_flat, $
+          CORRECT_FRINGING=correct_fringing_in_flatfield, FRINGING_SOLUTION_1D=fringing_solution_1d,fringe_nsmooth=fringe_nsmooth, $
+          MODEL_FRINGING=model_fringing,DETECTOR_PATTERNS=detector_patterns,MODELS=models, FLAT_ILLUMINATION=flat_illumination)
       
-      ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
-      if remove_detector_patterns_from_data eq 1 then begin
+        ;Any pattern present in all orders is likely related to the detector and should be left in the flat fields.
+        if remove_detector_patterns_from_data eq 1 then begin
+          
+          detector_patterns_block_size = 64L
+          
+          frac_part = double(nx)/double(detector_patterns_block_size)-long(double(nx)/double(detector_patterns_block_size))
+          if frac_part gt 1e-3 then $
+            message, ' The detector size is not a multiple of the detector patterns block size !' 
+          
+          ;Compute the median of detector patterns in moving blocks
+          ndpi = long(nx/detector_patterns_block_size)
+          median_blocks = dblarr(ndpi)
+          median_blocks_image = finite(fringing_solution_1d)*0d0
+          for dpi=0L, ndpi-1L do begin & $
+            min_hindex = dpi*detector_patterns_block_size & $
+            max_hindex = (dpi+1L)*detector_patterns_block_size-1L & $
+            median_blocks[dpi] = median(fringing_solution_1d[min_hindex:max_hindex,*]) & $
+            median_blocks_image[min_hindex:max_hindex,*] = median_blocks[dpi] & $
+          endfor
+          
+          detector_patterns = median(fringing_solution_1d,dim=2)
+          
+          ;Remove detector patterns from flat and fringing solutions
+          fringing_solution_1d /= (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
+          detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
+          fringing_flat /= detector_patterns_ny
+          
+          ;Add back detector patterns in flats
+          flat_corrected *= detector_patterns_ny
+          lumcorr_flat *= detector_patterns_ny
+        endif
         
-        detector_patterns_block_size = 64L
-        
-        frac_part = double(nx)/double(detector_patterns_block_size)-long(double(nx)/double(detector_patterns_block_size))
-        if frac_part gt 1e-3 then $
-          message, ' The detector size is not a multiple of the detector patterns block size !' 
-        
-        ;Compute the median of detector patterns in moving blocks
-        ndpi = long(nx/detector_patterns_block_size)
-        median_blocks = dblarr(ndpi)
-        median_blocks_image = finite(fringing_solution_1d)*0d0
-        for dpi=0L, ndpi-1L do begin & $
-          min_hindex = dpi*detector_patterns_block_size & $
-          max_hindex = (dpi+1L)*detector_patterns_block_size-1L & $
-          median_blocks[dpi] = median(fringing_solution_1d[min_hindex:max_hindex,*]) & $
-          median_blocks_image[min_hindex:max_hindex,*] = median_blocks[dpi] & $
-        endfor
-        
-        detector_patterns = median(fringing_solution_1d,dim=2)
-        
-        ;Remove detector patterns from flat and fringing solutions
-        fringing_solution_1d /= (detector_patterns#make_array((size(fringing_solution_1d))[2],value=1d0,/double))
-        detector_patterns_ny = detector_patterns#make_array(ny,value=1d0,/double)
-        fringing_flat /= detector_patterns_ny
-        
-        ;Add back detector patterns in flats
-        flat_corrected *= detector_patterns_ny
-        lumcorr_flat *= detector_patterns_ny
-      endif
-      
-      ;Output 1D fringing solutions as text files
-      if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
-        file_mkdir, flats_dir+'fringing_1d'+path_sep()
-      for no=0L, (size(fringing_solution_1d))[2]-1L do $
-        printuarr, fringe_1d_file+'_ORDER'+strtrim(no+1,2L)+'.txt', fringing_solution_1d[*,no], /new
-      writefits, fringe_1d_fits_file, fringing_solution_1d, /compress
-      writefits, flat_field_file, flat_corrected, /compress
-      writefits, lumcorr_flat_field_file, lumcorr_flat, /compress
-      writefits, fringe_flat_field_file, fringing_flat, /compress
-      
-      ;Output illumination function
-      save, flat_illumination, file=flats_dir+'flat_illumination_'+date_id+'_ID_'+flat_ids_uniq[f]+'.sav', /compress
-      
-      ;Output model fringing and detector patterns model_fringing = 1
-      if model_fringing eq 1 then begin
-        writefits, flats_dir+'fringe_model_2d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz', models, /compress
-        printuarr, flats_dir+'detector_patterns_'+date_id+'_ID_'+flat_ids_uniq[f]+'.txt', detector_patterns, /new
-        
-        ;Output 1D fringing models as text files
+        ;Output 1D fringing solutions as text files
         if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
           file_mkdir, flats_dir+'fringing_1d'+path_sep()
-        fringe_models_file = flats_dir+'fringing_1d'+path_sep()+'model_fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]
         for no=0L, (size(fringing_solution_1d))[2]-1L do $
-          printuarr, fringe_models_file+'_ORDER'+strtrim(no+1,2L)+'.txt', models[*,no], /new
+          printuarr, fringe_1d_file+'_ORDER'+strtrim(no+1,2L)+'.txt', fringing_solution_1d[*,no], /new
+        writefits, fringe_1d_fits_file, fringing_solution_1d, /compress
+        writefits, flat_field_file, flat_corrected, /compress
+        writefits, lumcorr_flat_field_file, lumcorr_flat, /compress
+        writefits, fringe_flat_field_file, fringing_flat, /compress
         
-        ;Make a figure with detector patterns
-        plpat1 = plot(detector_patterns, xtitle='Pixel position',xticklen=.015,yticklen=.015,$
-          margin=[.14,.12,.03,.025],font_size=16,thick=2,xthick=2,ythick=2,$
-          xrange=[-1L,nx+1L],ytitle='Persistent flux bias',/buffer)
-        for no=0L, 32L do $
-          plpati = plot(/overplot,no*64+[0,0], [-10,10], color='red',linestyle='--',yrange=plpat1.yrange)
-        plpat1.order,/bring_to_front
-        plpat1.save, flats_dir+'preview_detector_patterns.png'
-        plpat1.close
-      endif
-      
+        ;Output illumination function
+        save, flat_illumination, file=flats_dir+'flat_illumination_'+date_id+'_ID_'+flat_ids_uniq[f]+'.sav', /compress
+        
+        ;Output model fringing and detector patterns model_fringing = 1
+        if model_fringing eq 1 then begin
+          writefits, flats_dir+'fringe_model_2d_'+date_id+'_ID_'+flat_ids_uniq[f]+'.fits.gz', models, /compress
+          printuarr, flats_dir+'detector_patterns_'+date_id+'_ID_'+flat_ids_uniq[f]+'.txt', detector_patterns, /new
+          
+          ;Output 1D fringing models as text files
+          if ~file_test(flats_dir+'fringing_1d'+path_sep()) then $
+            file_mkdir, flats_dir+'fringing_1d'+path_sep()
+          fringe_models_file = flats_dir+'fringing_1d'+path_sep()+'model_fringe_1d_'+date_id+'_ID_'+flat_ids_uniq[f]
+          for no=0L, (size(fringing_solution_1d))[2]-1L do $
+            printuarr, fringe_models_file+'_ORDER'+strtrim(no+1,2L)+'.txt', models[*,no], /new
+          
+          ;Make a figure with detector patterns
+          plpat1 = plot(detector_patterns, xtitle='Pixel position',xticklen=.015,yticklen=.015,$
+            margin=[.14,.12,.03,.025],font_size=16,thick=2,xthick=2,ythick=2,$
+            xrange=[-1L,nx+1L],ytitle='Persistent flux bias',/buffer)
+          for no=0L, 32L do $
+            plpati = plot(/overplot,no*64+[0,0], [-10,10], color='red',linestyle='--',yrange=plpat1.yrange)
+          plpat1.order,/bring_to_front
+          plpat1.save, flats_dir+'preview_detector_patterns.png'
+          plpat1.close
+        endif
+      endelse
     endelse
     
     ;If flat field correction is to be overrided
