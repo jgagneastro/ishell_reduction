@@ -994,7 +994,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         opt_spectrum = general_optimal_extract_pmassey(im_order, sky_2d, profile_2d*badpix_mask, eff_read_noise, gain, ESP=err_opt_spectrum)
         
         ;Apply a final bad pixel masking step
-        opt_spectrum = correct_bad_pixels_posterior(opt_spectrum)
+        ;opt_spectrum = correct_bad_pixels_posterior(opt_spectrum)
         
         ;Refine the 2D model even more for output. This can be useful for debugging.
         opt_spectrum_2d = opt_spectrum#make_array(ny,value=1d0,/double)
