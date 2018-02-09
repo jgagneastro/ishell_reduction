@@ -5,7 +5,7 @@
 Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debug_trace_orders, DO_DARK_SUBTRACTION=do_dark_subtraction, $
   CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
   REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats, $
-  MODEL_REFINEMENT_CURVATURE=model_refinement_curvature
+  MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=correct_blaze_function_in_flatfield
   ;Code version history
   ; The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
   ; Version 1.0: First stable version (J. Gagne)
@@ -129,7 +129,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   second_bad_pixels_threshold = .5
   
   ;Should the blaze function and lamp spectra be corrected in the flat fields ?
-  correct_blaze_function_in_flatfield = 0
+  if correct_blaze_function_in_flatfield eq !NULL then $
+    correct_blaze_function_in_flatfield = 0
   
   ;The fractional quartile value of the pixel to use for normalization 
   quartile_fraction_for_norm = .99
