@@ -228,7 +228,7 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     
     ;Number of "walkers" that will independently run a Levenberg-Marquardt least-squares fitting
     ; A large number requires more CPU but will be more robust against local minima
-    nfit = 40
+    nfit = 60
     
     ;Initiate arrays that will contain the best-fitting parameters and the models
     model_pars = dblarr(4L,n_orders)+!values.d_nan
@@ -341,6 +341,10 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     final_flat = flat_image/fringing_flat
     lumcorr_flat = flat_image/(illumination_image*fringing_flat)
     fringing_solution_1d = fringing_no_detector_patterns
+    
+    ;Remove the Blaze function from the flat when this is requested
+    if keyword_set(correct_blaze_function) then $
+      final_flat /= illumination_image
     
   endif
   
