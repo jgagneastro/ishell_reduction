@@ -130,7 +130,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;Should the blaze function and lamp spectra be corrected in the flat fields ?
   if correct_blaze_function_in_flatfield eq !NULL then $
-    correct_blaze_function_in_flatfield = 0
+    correct_blaze_function_in_flatfield = 1
   
   ;The fractional quartile value of the pixel to use for normalization 
   quartile_fraction_for_norm = .99
