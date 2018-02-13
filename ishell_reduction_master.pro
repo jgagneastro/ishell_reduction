@@ -18,6 +18,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
+  ; - Parallelize the extraction process
   ; - Try optimally extracting the non-lumcorr flat field and see if the resulting Blaze function works better.
   
   ;Code version for headers
@@ -650,7 +651,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         
         ;If the partial IDL files are present, restore them to allow the code to plot
         ; full-orders figures
-        extraction_data_file = extraction_idl_dir+'extraction_idl_data'+strtrim(orders_structure[i].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
+        extraction_data_file = extraction_idl_dir+'extraction_idl_data'+strtrim(orders_structure[good_orders[i]].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
         if file_test(extraction_data_file) then begin
           ;Restore the necessary data
           opt_spectrum_norm = !NULL
@@ -677,7 +678,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         ;Restore the partial 2D model if it exists and that the rest is to be created
         if keyword_set(do_trace_2d_fit) then begin
           ;Make sure the save file exists
-          models_file = models_dir+'models_order'+strtrim(orders_structure[i].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
+          models_file = models_dir+'models_order'+strtrim(orders_structure[good_orders[i]].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
           if file_test(models_file) then begin
             ;Make sure the save file contains the updated 2d model
             updated_2d_model = !NULL
@@ -686,7 +687,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
               full_model_polynomials[*,i] = best_fit_parameters
             if keyword_set(updated_2d_model) then begin
               ;Identify order positions and patch the 2D model at the order position
-              g_order = where(orders_mask eq orders_structure[i].ORDER_ID, ng_order)
+              g_order = where(orders_mask eq orders_structure[good_orders[i]].ORDER_ID, ng_order)
               full_2d_model[g_order] = updated_2d_model[g_order]
             endif
           endif
@@ -695,14 +696,14 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       endif
       
       ;Create a list of y positions for that orders trace
-      y_position_order_i_estimate = poly(xarr,orders_structure[i].mid_coeffs)
+      y_position_order_i_estimate = poly(xarr,orders_structure[good_orders[i]].mid_coeffs)
 
       ;Define the height of the order
-      height = ceil(orders_structure[i].height)
+      height = ceil(orders_structure[good_orders[i]].height)
 
       ;Create an image where only the relevant order is seen
       im_order = data_im
-      g_order = where(orders_mask eq orders_structure[i].ORDER_ID, ng_order, complement=bad_order, ncomplement=nbad_order)
+      g_order = where(orders_mask eq orders_structure[good_orders[i]].ORDER_ID, ng_order, complement=bad_order, ncomplement=nbad_order)
       if nbad_order ne 0L then im_order[bad_order] = !values.d_nan
 
       ;Straighten the data trace with that estimated polynomial
@@ -753,7 +754,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       
       ;Create and save a figure of the trace profile compared to a Gaussian fit (this is useful for debugging)
       if ~file_test(trace_profiles_dir) then file_mkdir, trace_profiles_dir
-      trace_profiles_file = trace_profiles_dir+'trace_profile_order'+strtrim(orders_structure[i].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.png'
+      trace_profiles_file = trace_profiles_dir+'trace_profile_order'+strtrim(orders_structure[good_orders[i]].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.png'
       ytrace_precise = dindgen(1d3)/double(1d3-1)*double(height)
       gauss_funct, ytrace_precise, gauss_parameters, gauss_fit_precise
       
@@ -851,7 +852,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
 
       ;Create a curved 2D profile
       profile_2d = dblarr(nx,ny)+!values.d_nan
-      left_edge_ypos = poly(xarr,orders_structure[i].left_coeffs)
+      left_edge_ypos = poly(xarr,orders_structure[good_orders[i]].left_coeffs)
       int_left_edge_ypos = floor(left_edge_ypos)
       frac_left_edge_ypos = left_edge_ypos-double(int_left_edge_ypos)
       for l=0L, nx-1L do begin
@@ -1011,7 +1012,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         if nwbadpix ne 0L then updated_2d_model[wbadpix] = !values.d_nan
         
         ;Save the refined 2D model in IDL save format
-        models_file = models_dir+'models_order'+strtrim(orders_structure[i].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
+        models_file = models_dir+'models_order'+strtrim(orders_structure[good_orders[i]].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
         save, best_fit_parameters, functargs, updated_2d_model, badpix_mask, file=models_file, /compress
         
         ;Put the model at the correct order position in the full model array
@@ -1026,7 +1027,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       raw_spectrum_norm = raw_sp2/(medval*rel_norm)
       
       ;Save the intermediate reduction results for the full-orders diagnostic figures
-      extraction_data_file = extraction_idl_dir+'extraction_idl_data'+strtrim(orders_structure[i].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
+      extraction_data_file = extraction_idl_dir+'extraction_idl_data'+strtrim(orders_structure[good_orders[i]].order_id,2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
       save, opt_spectrum_norm, raw_spectrum_norm, trace_profile, ytrace_precise, gauss_fit_precise, /compress, file=extraction_data_file 
       
       ;Store these results in arrays
@@ -1040,7 +1041,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       if generate_individual_orders_spectra_figures then begin
         ;Plot the optimal extraction
         gfinite = where(finite(opt_spectrum),ngfinite)
-        a = plot(buffer=1,opt_spectrum_norm,xtitle='Pixels (Order '+strtrim(orders_structure[i].order_id,2)+')',ytitle='Relative flux',thick=2,color='black',margin=[.07,.12,.02,.02],xthick=2,ythick=2,yticklen=.015,xticklen=.015,dimensions=[1000,512],xrange=[gfinite[0L]-3L,gfinite[-1L]+3L],name='Optimal')
+        a = plot(buffer=1,opt_spectrum_norm,xtitle='Pixels (Order '+strtrim(orders_structure[good_orders[i]].order_id,2)+')',ytitle='Relative flux',thick=2,color='black',margin=[.07,.12,.02,.02],xthick=2,ythick=2,yticklen=.015,xticklen=.015,dimensions=[1000,512],xrange=[gfinite[0L]-3L,gfinite[-1L]+3L],name='Optimal')
         ;Plot the raw extraction with a bad pixel mask
         b = plot(/overplot,raw_spectrum_norm,yrange=a.yrange,color=whiten_color('red',40),thick=2,name='Regular')
         ;Plot the raw extraction without a bad pixel mask (hidden as it causes too much clutter)
@@ -1057,7 +1058,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         yrange = [yrange[0L],yrange[1L]<1.2]
         a.yrange = yrange
         ;Save the figure
-        a.save, previews_dir+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure[i].order_id,2)+'_preview.png'
+        a.save, previews_dir+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure[good_orders[i]].order_id,2)+'_preview.png'
         ;Close the figure
         a.close
       endif
