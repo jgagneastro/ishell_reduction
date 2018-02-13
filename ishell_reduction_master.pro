@@ -1051,7 +1051,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         ;Plot a legend
         l = legend(target=[a,b],position=[.97,.95],horizontal_align=1,vertical_align=1,font_size=10,transparency=50,shadow=0,thick=2)
         ;Increase yrange by 5% each side
-        yrange = a.yrange
+        yrange = [min(opt_spectrum_norm,/nan),max(opt_spectrum_norm,/nan)]
         yrange += [-1,1]*(max(yrange)-min(yrange))*.05
         ;Limit max yrange to 1.2
         yrange = [yrange[0L],yrange[1L]<1.2]
@@ -1164,7 +1164,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     if generate_full_orders_spectra_figures then begin
       nx_win = 3L
       ny_win = ceil(double(n_orders)/double(nx_win))
-      window_id = window(dimensions=[1000L*nx_win,512L*n_orders/nx_win]/2L,buffer=1)
+      window_id = window(dimensions=[1000L*nx_win,512L*n_orders/nx_win]/2L,buffer=0)
       for i=0L, n_orders-1L do begin
         layout = [nx_win,ny_win,i+1]
         gfinite = where(finite(full_orders_spectra[*,i]),ngfinite)
@@ -1173,7 +1173,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         pbi = plot(/overplot,full_orders_raw_spectra[*,i],color='red',thick=2)
         pbi.order,/send_to_back
         ;Increase yrange by 5% each side
-        yrange = pai.yrange
+        yrange = [min(full_orders_spectra[*,i],/nan),max(full_orders_spectra[*,i],/nan)]
         yrange += [-1,1]*(max(yrange)-min(yrange))*.05
         ;Limit max yrange to 1.2
         yrange = [yrange[0L],yrange[1L]<1.2]
