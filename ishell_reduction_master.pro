@@ -1164,7 +1164,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     if generate_full_orders_spectra_figures then begin
       nx_win = 3L
       ny_win = ceil(double(n_orders)/double(nx_win))
-      window_id = window(dimensions=[1000L*nx_win,512L*n_orders/nx_win]/2L,buffer=0)
+      window_id = window(dimensions=[1000L*nx_win,512L*n_orders/nx_win]/2L,buffer=1)
       for i=0L, n_orders-1L do begin
         layout = [nx_win,ny_win,i+1]
         gfinite = where(finite(full_orders_spectra[*,i]),ngfinite)
