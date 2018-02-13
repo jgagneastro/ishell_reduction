@@ -33,10 +33,10 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;The path of the night which will be reduced
   if ~keyword_set(data_path) then $
-    ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
+    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_night1/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
-    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
+    ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_No_Gas/'
   
   ;The path where the data reduction products will be stored
@@ -571,9 +571,12 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     orders_structure = orders_structure_cube[*,g_flat_id[0L]]
     orders_mask = orders_mask_cube[*,*,g_flat_id[0L]]
     
+    ;Determine the number of orders
+    good_orders = where(orders_structure.order_id ge 0,n_orders)
+    
     ;If all orders of this exposure are already present, skip this exposure altogether
     object_name = object_names[g_science[sci]]
-    output_files = spectra_dir+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure.order_id,2)+'_spectrum.txt'
+    output_files = spectra_dir+file_basename(data_file,file_ext(data_file,/FITS))+'_OBJ_'+object_name+'_ORD_'+strtrim(orders_structure[good_orders].order_id,2)+'_spectrum.txt'
     if min(file_test(output_files)) eq 1 then begin
       print, '   Skipping extraction because it already exists...'
       continue
@@ -600,9 +603,6 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     
     ;Flat-field the data
     data_im /= flat_field_corrected
-    
-    ;Determine the number of orders
-    good_orders = where(orders_structure.order_id ge 0,n_orders)
     
     ;Create an X positions array
     nx = (size(data_im))[1]
