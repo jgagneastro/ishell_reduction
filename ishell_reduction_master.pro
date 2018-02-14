@@ -16,7 +16,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
-  ; - Parallelize the extraction process
+  ; - The file name for detector patterns preview must have flat ID in it
   ; - Try optimally extracting the non-lumcorr flat field and see if the resulting Blaze function works better.
   
   ;Code version for headers
