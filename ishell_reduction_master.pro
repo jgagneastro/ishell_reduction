@@ -47,6 +47,12 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   if ~keyword_set(output_dir_root) then $
     output_dir_root = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/redux/'
   
+  ;Add trailing path separators if needed
+  if strmid(data_path,0,1,/reverse_offset) ne path_sep() then $
+    data_path += path_sep()
+  if strmid(output_dir_root,0,1,/reverse_offset) ne path_sep() then $
+    output_dir_root += path_sep()
+  
   ;Make sure that paths end with a path separator
   if strmid(data_path,0,1) ne path_sep() then $
     data_path += path_sep()
@@ -246,13 +252,13 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
     
     ;By default, darks or ThAr data won't be reduced
     do_reduce = replicate('Yes',ndata)
-    bad = where(strpos(strlowcase(object_names),'dark') ne -1 or strpos(strlowcase(object_names),'thar') ne -1, nbad)
+    bad = where(strpos(strlowcase(object_names),'dark') ne -1 or strpos(strlowcase(object_names),'thar') ne -1 or (strpos(strlowcase(object_names),'qth') ne -1 and strlowcase(gascell_position) eq 'in'), nbad)
     if nbad ne 0L then do_reduce[bad] = 'No'
     
     ;Create an crude log file and put some header information in it 
     printuarr, logfile, file_basename(fits_data), object_names, rtrim(integration_times,3), data_comments, tcs_obj, $
       gascell_position, data_filters, data_slits, do_reduce, title=[';File','Object','ExpTime','Comment','TCS Object','GasCell','Filter','Slit','Reduce'], $
-      /justify, symbol='|'
+      /justify, symbol='|', /new
     
     print, ' A log file was just created at :'
     print, '   '+logfile
