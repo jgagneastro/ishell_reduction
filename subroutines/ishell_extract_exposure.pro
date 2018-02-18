@@ -2,6 +2,7 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
     darks_ids_uniq, flat_ids_uniq, n_orders, g_science, ng_science, sci, science_flat_ids, nx, ny, $; Other needed variables
     edge_npix_mask, edge_npix_avoid, sizelag, window_lag_poly_fit, ndegree_sigma_fit, ndegree_poly_fit, nrows_sky, quartile_fraction_for_norm, $; Adjustable parameters Pt.1
     bad_pixels_threshold, second_bad_pixels_threshold, read_noise, dark_current, gain, $; Adjustable parameters Pt.2
+    generate_full_orders_spectra_figures,generate_residuals_fits_images,generate_full_orders_trace_profile_figures, generate_2d_model_fits_images, $; Adjustable parameters Pt.3
     spectra_dir, output_dir, trace_profiles_dir, previews_dir, $; Paths
     correct_blaze_function_in_flatfield,correct_fringing_in_flatfield,model_fringing,code_version,remove_detector_patterns_from_data,override_flats, $;Header information
     flats_uniq_cube_corrected, orders_mask_cube, $; Needed data
@@ -9,7 +10,7 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
     DO_DARK_SUBTRACTION=do_dark_subtraction, DO_TRACE_2D_FIT=do_trace_2d_fit, MASK_TRACE_EDGES=mask_trace_edges, REFINE_POLY_DROP_PIXELS=refine_poly_drop_pixels, $; Keywords Pt.1
     MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, GENERATE_INDIVIDUAL_ORDERS_TRACE_PROFILE_FIGURES=generate_individual_orders_trace_profile_figures, $; Keywords Pt.2
     GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures; Keywords Pt.3
-
+  
   ;Select data file
   data_file = fits_data[g_science[sci]]
 
