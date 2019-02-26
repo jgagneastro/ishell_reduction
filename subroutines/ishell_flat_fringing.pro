@@ -168,9 +168,9 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     ;Define a 1D correction to be applied to the flat field
     correct_1d = dblarr(nx)+1d0
     
-    if keyword_set(correct_blaze_function) then $
+    if correct_blaze_function eq 1L then $
       correct_1d *= spectral_profile
-    if keyword_set(correct_fringing) then $
+    if correct_fringing eq 1L then $
       correct_1d *= fringe_smooth
     
     ;Replicate that correction pattern in the vertical direction
@@ -343,8 +343,10 @@ Function ishell_flat_fringing, flat_image, orders_structure, orders_mask, CORREC
     fringing_solution_1d = fringing_no_detector_patterns
     
     ;Remove the Blaze function from the flat when this is requested
-    if keyword_set(correct_blaze_function) then $
+    if correct_blaze_function eq 1L then $
       final_flat /= illumination_image
+    if correct_fringing eq 1L then $
+      final_flat /= fringing_flat
     
   endif
   

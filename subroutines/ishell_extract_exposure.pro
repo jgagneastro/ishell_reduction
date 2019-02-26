@@ -72,7 +72,8 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
   yarr = dindgen(ny)
 
   ;Initiate necessary variables for the 2D model traces mode
-  if keyword_set(do_trace_2d_fit) then begin
+  ;if keyword_set(do_trace_2d_fit) then begin
+  if do_trace_2d_fit then begin
     ;Create directories for models and residuals
     models_dir = output_dir+'models'+path_sep()
     if ~file_test(models_dir) then file_mkdir, models_dir
@@ -136,7 +137,8 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
       endif
 
       ;Restore the partial 2D model if it exists and that the rest is to be created
-      if keyword_set(do_trace_2d_fit) then begin
+      ;if keyword_set(do_trace_2d_fit) then begin
+      if do_trace_2d_fit then begin
         ;Make sure the save file exists
         models_file = models_dir+'models_order'+strtrim(ord_ids[good_orders[i]],2L)+'_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.sav'
         if file_test(models_file) then begin
@@ -299,7 +301,6 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
     gfin_pos_refined = where(finite(y_position_order_i_refined), ngfin_pos_refined)
     if ngfin_pos_refined le 10 then begin
       message, ' The refined trace position has too few finite data points !', /continue
-      continue
     endif
     refined_coefficients = reform(poly_fit(xarr[gfin_pos_refined],y_position_order_i_refined[gfin_pos_refined],ndegree_poly_fit-1L))
 
@@ -399,7 +400,8 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
     ; and will account for wavelength-dependent seeing. It will also produce more refinements
     ; to the Y trace position polynomial.
     ;This option should absolutely not be used if the trace profile is very different from a gaussian.
-    if keyword_set(do_trace_2d_fit) then begin
+    ; if keyword_set(do_trace_2d_fit) then begin
+    if do_trace_2d_fit then begin
       ;Estimate the parameters that will be used to create a 2D model of the data
       estimated_parameters = double([refined_coefficients, gauss_parameters[2L], dblarr(ndegree_sigma_fit-1L)])
 
@@ -574,7 +576,8 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
   endfor
 
   ;Once the loop over orders is finished, save the full 2D models file and the data - model residuals as well (if needed)
-  if keyword_set(do_trace_2d_fit) then begin
+  ;if keyword_set(do_trace_2d_fit) then begin
+  if do_trace_2d_fit then begin
     if generate_2d_model_fits_images then begin
       full_model_file = models_dir+'full_model_'+object_name+'_'+file_basename(data_file,file_ext(data_file))+'.fits.gz'
       writefits, full_model_file, full_2d_model, /silent, /compress

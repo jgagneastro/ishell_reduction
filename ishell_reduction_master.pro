@@ -2,7 +2,8 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
   REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats, $
   MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=correct_blaze_function_in_flatfield, $
-  NTHREADS=nthreads
+  NTHREADS=nthreads, do_trace_2d_fit=do_trace_2d_fit
+
   ;Code version history
   ; The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
   ; Version 1.0: First stable version (J. Gagne)
@@ -18,6 +19,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
   ; - The file name for detector patterns preview must have flat ID in it
   ; - Try optimally extracting the non-lumcorr flat field and see if the resulting Blaze function works better.
+  ; Example:
+  ; ishell_reduction_master, '/media/sdc/iSHELL/Data/Raw2/20161016UT/', '/media/sdc/iSHELL/Data/Reduced_Blaze/', CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=1 
+  ; ishell_reduction_master, '/media/sdc/iSHELL/Data/Raw2/20161022UT/', '/media/sdc/iSHELL/Data/Reduced_Blaze/', CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=1
+  ; ishell_reduction_master, '/media/sdc/iSHELL/Data/Raw2/20181124UT/', '/media/sdc/iSHELL/Data/Reduced2/', CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=0, CORRECT_FRINGING_IN_FLATFIELD=1
+  ; ishell_reduction_master, '/media/sdc/iSHELL/Data/Raw2/20181015UT/', '/media/sdc/iSHELL/Data/Reduced/', CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=0, CORRECT_FRINGING_IN_FLATFIELD=1, NTHREADS=6
   
   ;Code version for headers
   code_version = 1.7
@@ -74,6 +80,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ;Whether fringing should be modelled to separate it better from column-dependent detector patterns
   if model_fringing eq !NULL then $
     model_fringing = 1
+
+  ;Perform a complete 2D fitting of the trace with a gaussian profile whose width
+  ; vary linearly with wavelength (should produce better results, but might crash more often) 
+  if do_trace_2d_fit eq !NULL then $ 
+    do_trace_2d_fit = 1
   
   ;Whether or not column-dependent detector patterns should be preserved in the flat fields and therefore removed from the data
   ;This option is obsolete because it does not appropriately eliminate fringing from the flat fields.
@@ -96,11 +107,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   edge_npix_avoid = 200L
   
   ;Mask N pixels on each side of the detector horizontally (this is where the Blaze function is at its lowest)
-  edge_npix_mask = 200L 
-  
-  ;Perform a complete 2D fitting of the trace with a gaussian profile whose width
-  ; vary linearly with wavelength (should produce better results, but might crash more often) 
-  do_trace_2d_fit = 1
+  edge_npix_mask = 200L
   
   ;Which figures should be output
   generate_full_orders_spectra_figures = 1
@@ -140,7 +147,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;Should the blaze function and lamp spectra be corrected in the flat fields ?
   if correct_blaze_function_in_flatfield eq !NULL then $
-    correct_blaze_function_in_flatfield = 1
+    correct_blaze_function_in_flatfield = 0
   
   ;The fractional quartile value of the pixel to use for normalization 
   quartile_fraction_for_norm = .99
@@ -173,11 +180,11 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;Read noise in electrons, assuming NREAD = 32 with the 30-stripes slow readout mode
   ;data from http://irtfweb.ifa.hawaii.edu/~ishell/iSHELL_observing_manual.pdf
-  read_noise = 8d0
+  read_noise = 8.0d0
   
   ;Median measured dark current in electrons per second
   ;http://irtfweb.ifa.hawaii.edu/~ishell/iSHELL_observing_manual.pdf
-  dark_current = 0.05
+  dark_current = 0.05d0
   
   ;List of available filters with their relevant settings
   filters_names =               ['KGAS', 'K2', 'J2']
