@@ -9,7 +9,7 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
     order_ids, order_heights, order_left_coeffs, order_mid_coeffs, $; Orders structure
     DO_DARK_SUBTRACTION=do_dark_subtraction, DO_TRACE_2D_FIT=do_trace_2d_fit, MASK_TRACE_EDGES=mask_trace_edges, REFINE_POLY_DROP_PIXELS=refine_poly_drop_pixels, $; Keywords Pt.1
     MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, GENERATE_INDIVIDUAL_ORDERS_TRACE_PROFILE_FIGURES=generate_individual_orders_trace_profile_figures, $; Keywords Pt.2
-    GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures; Keywords Pt.3
+    GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures, FAINT_TARGET=faint_target; Keywords Pt.3
   
   ;Select data file
   data_file = fits_data[g_science[sci]]
@@ -254,63 +254,73 @@ Pro ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times
       lag = [-reverse(lag),0.,lag]
     endif
 
-    ;Loop on pixel position to refine the trace position
-    trace_pos_deviations = dblarr(nx)+!values.d_nan
-    for l=0L, nx-1L do begin
-
-      ;Skip pixels where the intial spectrum has a flux of less than 50% of the max
-      if ~finite(spectrum_initial_estimate[l]) or spectrum_initial_estimate[l] le 0.5 then continue
-
-      ;Take a slice of the data at that pixel position and normalize it
-      data_slice = smoothed_data_order[l,*]
-      data_slice /= weighted_median(data_slice,medval=quartile_fraction_for_norm)
-      data_slice >= 0d0
-
-      ;Do the cross-correlation
-      ccs = fc_correlate(data_slice,trace_profile,lag,/INTEGERS)
-
-      ;Give more importance to cross-correlation values near the center of the array
-      ccs *= exp(-(dindgen(n_elements(ccs))-double(height)/2d0)^2/(2.*sizelag^2)*3)
-
-      ;Fit a second-order polynomial near the center of the cross-correlation function
-      ; to precisely determine its central value
-      void = max(ccs,wmax_ccs,/nan)
-      if wmax_ccs gt n_elements(lag)-window_lag_poly_fit-1L or wmax_ccs lt window_lag_poly_fit then continue
-      ;message,'Fix illegal subscript range CCS'
-      fit_ccs_par = poly_fit(lag[wmax_ccs-window_lag_poly_fit:wmax_ccs+window_lag_poly_fit],ccs[wmax_ccs-window_lag_poly_fit:wmax_ccs+window_lag_poly_fit],2)
-
-      ;Analytically determine the maximum value of this second-order polynomial.
-      ; This is the refined position of the trace at this column
-      trace_pos_deviations[l] = 0.5d0*fit_ccs_par[1]/fit_ccs_par[2]
-
-    endfor
-
-    ;Drop the last ~5 points on both ends
-    if keyword_set(refine_poly_drop_pixels) then begin
-      g_finite_devs = where(finite(trace_pos_deviations), ng_finite_devs)
-      if ng_finite_devs gt 2L*refine_poly_drop_pixels then begin
-        trace_pos_deviations[g_finite_devs[0L:refine_poly_drop_pixels-1L]] = !values.d_nan
-        trace_pos_deviations[g_finite_devs[-refine_poly_drop_pixels:*]] = !values.d_nan
+    ;Loop on pixel position to refine the trace position - skip this step for faint targets
+    if faint_target eq 0 then begin
+      trace_pos_deviations = dblarr(nx)+!values.d_nan
+      for l=0L, nx-1L do begin
+  
+        ;Skip pixels where the intial spectrum has a flux of less than 50% of the max
+        if ~finite(spectrum_initial_estimate[l]) or spectrum_initial_estimate[l] le 0.5 then continue
+  
+        ;Take a slice of the data at that pixel position and normalize it
+        data_slice = smoothed_data_order[l,*]
+        data_slice /= weighted_median(data_slice,medval=quartile_fraction_for_norm)
+        data_slice >= 0d0
+  
+        ;Do the cross-correlation
+        ccs = fc_correlate(data_slice,trace_profile,lag,/INTEGERS)
+  
+        ;Give more importance to cross-correlation values near the center of the array
+        ccs *= exp(-(dindgen(n_elements(ccs))-double(height)/2d0)^2/(2.*sizelag^2)*3)
+  
+        ;Fit a second-order polynomial near the center of the cross-correlation function
+        ; to precisely determine its central value
+        void = max(ccs,wmax_ccs,/nan)
+        if wmax_ccs gt n_elements(lag)-window_lag_poly_fit-1L or wmax_ccs lt window_lag_poly_fit then continue
+        ;message,'Fix illegal subscript range CCS'
+        fit_ccs_par = poly_fit(lag[wmax_ccs-window_lag_poly_fit:wmax_ccs+window_lag_poly_fit],ccs[wmax_ccs-window_lag_poly_fit:wmax_ccs+window_lag_poly_fit],2)
+  
+        ;Analytically determine the maximum value of this second-order polynomial.
+        ; This is the refined position of the trace at this column
+        trace_pos_deviations[l] = 0.5d0*fit_ccs_par[1]/fit_ccs_par[2]
+  
+      endfor
+  
+      ;Drop the last ~5 points on both ends
+      if keyword_set(refine_poly_drop_pixels) then begin
+        g_finite_devs = where(finite(trace_pos_deviations), ng_finite_devs)
+        if ng_finite_devs gt 2L*refine_poly_drop_pixels then begin
+          trace_pos_deviations[g_finite_devs[0L:refine_poly_drop_pixels-1L]] = !values.d_nan
+          trace_pos_deviations[g_finite_devs[-refine_poly_drop_pixels:*]] = !values.d_nan
+        endif
       endif
-    endif
+  
+      ;Create a refined list of trace positions
+      y_position_order_i_refined = y_position_order_i_estimate+trace_pos_deviations
+      
+      ;Refine the coefficients with a polynomial fit
+      gfin_pos_refined = where(finite(y_position_order_i_refined), ngfin_pos_refined)
+      if ngfin_pos_refined le 10 then begin
+        message, ' The refined trace position has too few finite data points !', /continue
+      endif
+      refined_coefficients = reform(poly_fit(xarr[gfin_pos_refined],y_position_order_i_refined[gfin_pos_refined],ndegree_poly_fit-1L))
 
-    ;Create a refined list of trace positions
-    y_position_order_i_refined = y_position_order_i_estimate+trace_pos_deviations
+      ;Shift the first coefficient so that the profile matches the trace exactly
+      ; this shift is non-zero only when the trace is not exactly at the center of the order
+      refined_coefficients[0L] += trace_max_pos-double(height)/2d0
 
-    ;Refine the coefficients with a polynomial fit
-    gfin_pos_refined = where(finite(y_position_order_i_refined), ngfin_pos_refined)
-    if ngfin_pos_refined le 10 then begin
-      message, ' The refined trace position has too few finite data points !', /continue
-    endif
-    refined_coefficients = reform(poly_fit(xarr[gfin_pos_refined],y_position_order_i_refined[gfin_pos_refined],ndegree_poly_fit-1L))
-
-    ;Shift the first coefficient so that the profile matches the trace exactly
-    ; this shift is non-zero only when the trace is not exactly at the center of the order
-    refined_coefficients[0L] += trace_max_pos-double(height)/2d0
-
+    endif else begin
+      
+      ;For now, when using a faint targets we will skip the trace refinement by just
+      ; re-extracting with the flat position. Eventually, the code could potentially
+      ; be made slightly more efficient by avoiding the subsequent re-extraction 
+      refined_coefficients = ord_mid_coeffs[*,good_orders[i]]
+      
+    endelse
+    
     ;Recreate an array of refined trace positions (with no NaNs)
     y_position_refined = poly(xarr,refined_coefficients)
-
+    
     ;Create a curved 2D profile
     profile_2d = dblarr(nx,ny)+!values.d_nan
     left_edge_ypos = poly(xarr,ord_left_coeffs[*,good_orders[i]])

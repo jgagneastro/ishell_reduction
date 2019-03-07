@@ -2,7 +2,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   CORRECT_FRINGING_IN_FLATFIELD=correct_fringing_in_flatfield, MODEL_FRINGING=model_fringing, $
   REMOVE_DETECTOR_PATTERNS_FROM_DATA=remove_detector_patterns_from_data, OVERRIDE_FLATS=override_flats, $
   MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=correct_blaze_function_in_flatfield, $
-  NTHREADS=nthreads, do_trace_2d_fit=do_trace_2d_fit
+  NTHREADS=nthreads, do_trace_2d_fit=do_trace_2d_fit, FAINT_TARGET=faint_target
 
   ;Code version history
   ; The code started at 0.9, between 0.9 and 1.0 only minor bugs were fixed and more diagnostic outputs were added
@@ -14,6 +14,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; Version 1.5: Added support for J2 band, .gz data, fixed problems with continuum in the optimal spectrum and improved bad pixel rejection. Feb. 6, 2018
   ; Version 1.6: Fixed a problem with fringing residuals left in flat fields. Feb 8, 2018
   ; Version 1.7: Added support for split_for with NTHREADS keyword
+  ; Version 1.8: Added support for faint targets with /faint_target keyword
   ; 
   ;Planned modifications:
   ; - Use A star to derive Blaze function: reduce Vega with lumcorr to do that
@@ -26,7 +27,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   ; ishell_reduction_master, '/media/sdc/iSHELL/Data/Raw2/20181015UT/', '/media/sdc/iSHELL/Data/Reduced/', CORRECT_BLAZE_FUNCTION_IN_FLATFIELD=0, CORRECT_FRINGING_IN_FLATFIELD=1, NTHREADS=6
   
   ;Code version for headers
-  code_version = 1.7
+  code_version = 1.8
   
   ;List of subroutines
   forward_function readfits, ishell_trace_orders, ishell_flat_fringing, interpol2, weighted_median, $
@@ -108,6 +109,26 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;Mask N pixels on each side of the detector horizontally (this is where the Blaze function is at its lowest)
   edge_npix_mask = 200L
+  
+  ;Default mode is for bright targets
+  ;Using the faint target mode will skip the step where the trace shape is refined with 
+  ; the science data, and instead only the shape of the flat field orders will be used
+  ; to straighten the science target trace position.
+  ;When using /FAINT_TARGET,  
+  if faint_target eq !NULL then $
+    faint_target = 0
+  
+  ;If faint_target is set, it overrides some other keywords that are not suited for faint targets
+  if faint_target eq 1 then begin
+    if do_trace_2d_fit eq 1 then begin
+      message, 'The "do_trace_2d_fit" keyword was forced off because /FAINT_TARGET was set', /continue
+      do_trace_2d_fit = 0
+    endif
+    if model_refinement_curvature eq 1 then begin
+      message, 'The "model_refinement_curvature" keyword was forced off because /FAINT_TARGET was set', /continue
+      model_refinement_curvature = 0
+    endif
+  endif
   
   ;Which figures should be output
   generate_full_orders_spectra_figures = 1
@@ -593,7 +614,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
         order_ids, order_heights, order_left_coeffs, order_mid_coeffs, $; Orders structure
         DO_DARK_SUBTRACTION=do_dark_subtraction, DO_TRACE_2D_FIT=do_trace_2d_fit, MASK_TRACE_EDGES=mask_trace_edges, REFINE_POLY_DROP_PIXELS=refine_poly_drop_pixels, $; Keywords Pt.1
         MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, GENERATE_INDIVIDUAL_ORDERS_TRACE_PROFILE_FIGURES=generate_individual_orders_trace_profile_figures, $; Keywords Pt.2
-        GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures; Keywords Pt.3
+        GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures, FAINT_TARGET=faint_target; Keywords Pt.3
       
     endfor
   
@@ -614,7 +635,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       'order_ids','order_heights','order_left_coeffs','order_mid_coeffs',$
       'do_dark_subtraction','do_trace_2d_fit','mask_trace_edges','refine_poly_drop_pixels',$
       'model_refinement_curvature','generate_individual_orders_trace_profile_figures',$
-      'generate_individual_orders_spectra_figures']
+      'generate_individual_orders_spectra_figures', 'faint_target']
     
     ;The command that will be launched on each CPU thread (do not include comments or line breaks !)
     commands = ['ishell_extract_exposure, fits_data, tcs_obj, object_names, integration_times, '+$
@@ -628,7 +649,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
       'order_ids, order_heights, order_left_coeffs, order_mid_coeffs, '+$
       'DO_DARK_SUBTRACTION=do_dark_subtraction, DO_TRACE_2D_FIT=do_trace_2d_fit, MASK_TRACE_EDGES=mask_trace_edges, REFINE_POLY_DROP_PIXELS=refine_poly_drop_pixels, '+$
       'MODEL_REFINEMENT_CURVATURE=model_refinement_curvature, GENERATE_INDIVIDUAL_ORDERS_TRACE_PROFILE_FIGURES=generate_individual_orders_trace_profile_figures, '+$
-      'GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures']
+      'GENERATE_INDIVIDUAL_ORDERS_SPECTRA_FIGURES=generate_individual_orders_spectra_figures, FAINT_TARGET=faint_target']
     
       split_for, 0L, ng_science-1L, $
         commands=commands, NSPLIT=nthreads, ctvariable_name='sci',varnames=varnames
