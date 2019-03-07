@@ -40,7 +40,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;The path of the night which will be reduced
   if ~keyword_set(data_path) then $
-    data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20171023UT/'
+    data_path = '/Users/gagne/Documents/Data_Repository/raw/IRTF/iShell/Trappist_1_For_Jonathan/Raw/20180806UT/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161016UT_Vega_night1/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
     ;data_path = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/20161107UT_Vega_night2/'
@@ -52,7 +52,7 @@ Pro ishell_reduction_master, data_path, output_dir_root, DEBUG_TRACE_ORDERS=debu
   
   ;The path where the data reduction products will be stored
   if ~keyword_set(output_dir_root) then $
-    output_dir_root = '/Users/gagne/Documents/Data_Repository/RAW/IRTF/iShell/redux/'
+    output_dir_root = '/Users/gagne/Documents/Data_Repository/raw/IRTF/iShell/Trappist_1_For_Jonathan/Reduced_JG/'
   
   ;Add trailing path separators if needed
   if strmid(data_path,0,1,/reverse_offset) ne path_sep() then $
